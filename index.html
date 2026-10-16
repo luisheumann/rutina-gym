@@ -183,6 +183,51 @@ select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:
 .btable tr{cursor:pointer}
 details.reg summary{cursor:pointer;font-weight:600;color:var(--accent);padding:4px 0}
 details.reg[open] summary{margin-bottom:8px}
+/* catálogo y editor */
+:root{--bad:#b3261e;--bad-soft:#fbe4e2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bad:#ff8a80;--bad-soft:#3a1d1b}}
+:root[data-theme="dark"]{--bad:#ff8a80;--bad-soft:#3a1d1b}
+.tabs{grid-template-columns:repeat(4,1fr)}
+.tabs button{font-size:13.5px;padding:8px 0;letter-spacing:0}
+.lumbar.bad{background:var(--bad-soft)}
+.lumbar.bad b{color:var(--bad)}
+.search{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.fchips{display:flex;flex-wrap:wrap;gap:6px}
+.fchips button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 11px;font-size:13px;color:var(--ink)}
+.fchips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg3{grid-template-columns:repeat(4,1fr)}
+.chk{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.chk input{width:18px;height:18px;accent-color:var(--accent)}
+.catrow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.addbtn{margin-right:10px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:9px;padding:7px 10px;font-weight:600;font-size:13px;white-space:nowrap}
+.addbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.badge{font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--hold-soft);color:var(--hold)}
+.badge.mine{background:var(--accent-soft);color:var(--up)}
+.badge.r1{background:var(--warn-soft);color:var(--warn)}
+.badge.r2{background:var(--bad-soft);color:var(--bad)}
+.daypick{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.daypick button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:7px 0;font-family:var(--display);font-weight:700;font-size:14px;color:var(--muted)}
+.daypick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.pickbar{position:sticky;top:6px;z-index:2;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:10px;font-size:14px}
+.pickbar b{flex:1;min-width:0}
+.pickbar .btn{background:var(--accent-ink);color:var(--accent);padding:7px 12px}
+.edbtn{border:1px solid var(--line);background:transparent;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;color:var(--ink)}
+.editor{display:flex;flex-direction:column;gap:10px}
+.editor label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.editor input{font:inherit;font-size:16px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);text-transform:none;letter-spacing:0}
+.edrow{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+.edrow img{width:52px;height:40px;object-fit:cover;border-radius:6px;background:var(--line)}
+.edrow .exmeta{font-size:12px}
+.edrow .nm{font-weight:600;font-size:14px;line-height:1.2}
+.icons{display:flex;gap:4px}
+.icons button{width:34px;height:34px;border:1px solid var(--line);background:transparent;border-radius:8px;font-size:15px;color:var(--ink);display:grid;place-items:center}
+.icons button:disabled{opacity:.3}
+.icons .x{color:var(--bad)}
+.cover{border-radius:10px;padding:9px 11px;font-size:13.5px;background:var(--accent-soft)}
+.cover.warn{background:var(--warn-soft)}
+.cover.warn b{color:var(--warn)}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13.5px}
 .sync{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--muted)}
 .sync .sync-txt{flex:1;min-width:0}
 .sync .btn{padding:8px 12px}
@@ -204,8 +249,27 @@ details.reg[open] summary{margin-bottom:8px}
   <nav class="tabs" aria-label="Vista">
     <button id="tab-train" aria-pressed="true">Entrenar</button>
     <button id="tab-mus" aria-pressed="false">Músculos</button>
+    <button id="tab-cat" aria-pressed="false">Ejercicios</button>
     <button id="tab-prog" aria-pressed="false">Progreso</button>
   </nav>
+
+  <section id="v-cat" class="wrap" style="gap:12px" hidden>
+    <div id="pickbar"></div>
+    <div class="panel">
+      <input id="cat-q" class="search" type="search" placeholder="Buscar: prensa, polea, hombro…" aria-label="Buscar ejercicio" autocomplete="off">
+      <div class="seg seg3" role="group" aria-label="Zona del cuerpo">
+        <button type="button" data-zone="all" aria-pressed="true">Todo</button>
+        <button type="button" data-zone="sup" aria-pressed="false">Superior</button>
+        <button type="button" data-zone="inf" aria-pressed="false">Inferior</button>
+        <button type="button" data-zone="core" aria-pressed="false">Core</button>
+      </div>
+      <div class="fchips" id="cat-mus" role="group" aria-label="Músculo"></div>
+      <div class="fchips" id="cat-eq" role="group" aria-label="Equipo"></div>
+      <label class="chk"><input type="checkbox" id="cat-safe"> Ocultar los que tienen riesgo para la lumbar</label>
+    </div>
+    <div class="sub" id="cat-count"></div>
+    <div class="list" id="cat-list"></div>
+  </section>
 
   <section id="v-mus" class="wrap" style="gap:12px" hidden>
     <div class="panel">
@@ -398,14 +462,15 @@ const EX = {
     l:"Sentado con la espalda recta. Si molesta el codo, baja el peso o usa mancuernas."}
 };
 // 1=lunes … 5=viernes
-const PLAN = {
+let PLAN = {
   1:{t:"Piernas",c:["Cuádriceps","Isquios","Gemelos"],ex:["prensa","goblet","extension","femoral","gemelo"]},
   2:{t:"Pecho y tríceps",c:["Pecho","Tríceps"],ex:["banca","inclinado","pecdeck","frances","jalontri","trinuca"]},
   3:{t:"Glúteos y abdomen",c:["Glúteos","Core"],ex:["hipthrust","abductor","patada","plancha","deadbug","pallof"]},
   4:{t:"Espalda y bíceps",c:["Espalda","Bíceps"],ex:["jalon","remopolea","remoapoyado","pullover","curlz","curlinc","scott","martillo"]},
   5:{t:"Hombros y antebrazo",c:["Deltoides","Trapecio","Antebrazo"],ex:["pressh","lateral","inverso","facepull","encogimiento","munecaup","munecadown"]}
 };
-const SHORT = {1:"Pier",2:"Pecho",3:"Glút",4:"Espal",5:"Homb"};
+const DEFAULT_PLAN = JSON.parse(JSON.stringify(PLAN));
+const shortOf = wd => PLAN[wd] ? PLAN[wd].t.slice(0,5) : "·";
 
 /* ---------- estado y almacenamiento ---------- */
 let logs = {};            // docId -> {ex,date,sets,ts}
@@ -418,8 +483,9 @@ let open = null;
 
 let weights = {};         // docId "peso_YYYY-MM-DD" -> {peso,date,ts}
 let meds = {};            // docId "medidas_YYYY-MM-DD" -> {tipo,date,biceps,...}
-function lsLoad(){ try{ logs = JSON.parse(localStorage.getItem("gymlogs")||"{}") }catch(e){ logs = {} } try{ weights = JSON.parse(localStorage.getItem("gympeso")||"{}") }catch(e){ weights = {} } try{ meds = JSON.parse(localStorage.getItem("gymmed")||"{}") }catch(e){ meds = {} } }
-function lsSave(){ try{ localStorage.setItem("gymlogs", JSON.stringify(logs)); localStorage.setItem("gympeso", JSON.stringify(weights)); localStorage.setItem("gymmed", JSON.stringify(meds)) }catch(e){} }
+let rutina = null;        // {tipo:"rutina", dias:{wd:{t,ex}}, ts}
+function lsLoad(){ try{ rutina = JSON.parse(localStorage.getItem("gymrut")||"null") }catch(e){ rutina = null } try{ logs = JSON.parse(localStorage.getItem("gymlogs")||"{}") }catch(e){ logs = {} } try{ weights = JSON.parse(localStorage.getItem("gympeso")||"{}") }catch(e){ weights = {} } try{ meds = JSON.parse(localStorage.getItem("gymmed")||"{}") }catch(e){ meds = {} } }
+function lsSave(){ try{ localStorage.setItem("gymlogs", JSON.stringify(logs)); localStorage.setItem("gympeso", JSON.stringify(weights)); localStorage.setItem("gymmed", JSON.stringify(meds)); localStorage.setItem("gymrut", JSON.stringify(rutina)) }catch(e){} }
 lsLoad();
 const storeNote = document.getElementById("store");
 
@@ -474,7 +540,7 @@ function renderCal(){
     const b = document.createElement("button");
     b.className = "day" + (d.getMonth()!==view.getMonth()?" out":"") + (key===iso(today)?" today":"") + (key===iso(sel)?" sel":"");
     b.setAttribute("aria-label", `${d.getDate()} ${MESES[d.getMonth()]}${PLAN[wd]?", "+PLAN[wd].t:", descanso"}`);
-    b.innerHTML = `<span class="n">${d.getDate()}</span><span class="tag">${SHORT[wd]||"·"}</span><span class="dot${done.has(key)?"":" no"}"></span>`;
+    b.innerHTML = `<span class="n">${d.getDate()}</span><span class="tag">${esc(shortOf(wd))}</span><span class="dot${done.has(key)?"":" no"}"></span>`;
     b.onclick = () => { sel = d; open = null; if(d.getMonth()!==view.getMonth()) view = new Date(d.getFullYear(), d.getMonth(), 1); render(); };
     g.appendChild(b);
   }
@@ -488,17 +554,25 @@ function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt
 function renderDay(){
   const box = document.getElementById("day"), wd = sel.getDay(), key = iso(sel), p = PLAN[wd];
   const fecha = `${DIAS[wd]} ${sel.getDate()} de ${MESES[sel.getMonth()]}`;
-  if(!p){
+  if(editDay===wd){ renderEditor(box, wd, fecha); return; }
+  const extra = Object.values(logs).filter(l => l.date===key && EX[l.ex] && !(p?.ex||[]).includes(l.ex)).map(l => l.ex);
+  if(!p && !extra.length){
     box.innerHTML = `<div class="dayhead"><h2>Descanso</h2><span class="sub">${fecha}</span></div>
-      <p class="rest">Hoy toca recuperar. Dormir bien y comer suficiente proteína es parte del entrenamiento.</p>`;
+      <p class="rest">Hoy toca recuperar. Dormir bien y comer suficiente proteína es parte del entrenamiento.</p>
+      <div class="actions"><button class="btn sec" type="button" id="ed-open">Agregar entrenamiento a los ${DIAS[wd]}</button></div>`;
+    document.getElementById("ed-open").onclick = () => { editDay = wd; renderDay(); };
     return;
   }
-  const doneN = p.ex.filter(x => logs[key+"_"+x]).length;
-  const series = p.ex.reduce((a,x)=>a+EX[x].s,0);
+  const exs = [...(p?.ex||[]), ...extra];
+  const doneN = exs.filter(x => logs[key+"_"+x]).length;
+  const series = exs.reduce((a,x)=>a+EX[x].s,0);
   box.innerHTML = `<div class="wrap" style="gap:10px">
-    <div class="dayhead"><h2>${p.t}</h2><span class="sub">${fecha} · ${doneN}/${p.ex.length} hechos · ${series} series</span></div>
-    <div class="chips">${p.c.map(c=>`<span class="chip">${c}</span>`).join("")}</div>
-    <div class="list">${p.ex.map(x => card(x, key)).join("")}</div></div>`;
+    <div class="dayhead"><h2>${esc(p ? p.t : "Entrenamiento")}</h2><span class="sub">${fecha} · ${doneN}/${exs.length} hechos · ${series} series</span></div>
+    <div class="actions" style="justify-content:space-between"><div class="chips">${dayChips(exs).map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>
+      <button class="edbtn" type="button" id="ed-open">Editar día</button></div>
+    ${extra.length && p ? `<p class="note" style="margin:0">También registraste ese día ejercicios que ya no están en la rutina; aparecen al final.</p>` : ""}
+    <div class="list">${exs.map(x => card(x, key)).join("")}</div></div>`;
+  document.getElementById("ed-open").onclick = () => { editDay = wd; renderDay(); };
   box.querySelectorAll(".exhead").forEach(h => h.onclick = () => { const id = h.dataset.ex; open = open===id?null:id; renderDay(); if(open) document.getElementById("ex-"+id)?.scrollIntoView({block:"nearest",behavior:"smooth"}); });
   box.querySelectorAll("form").forEach(f => f.onsubmit = onSave);
   box.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { await deleteLog(b.dataset.del); render(); });
@@ -526,7 +600,7 @@ function card(x, key){
       ${musRow(x)}
       <div class="target"><span>Objetivo: <span class="mono">${repsTxt}</span></span>${prev?`<span>Última vez: <span class="mono">${prev.sets.map(s=>(s.kg?fmt(s.kg)+"×":"")+s.reps).join(" · ")}</span></span>`:""}</div>
       <ol class="tech">${e.t.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>
-      ${e.l?`<div class="lumbar"><b>Lumbar:</b> ${esc(e.l)}</div>`:""}
+      ${e.l?`<div class="lumbar${e.risk===2?" bad":""}"><b>Lumbar:</b> ${esc(e.l)}</div>`:""}
       <form class="sets" data-ex="${x}" data-doc="${docId}" data-date="${key}">
         ${rows.join("")}
         <div class="actions"><button class="btn pri" type="submit">${mine?"Actualizar":"Guardar"}</button>
@@ -561,11 +635,11 @@ async function onSave(ev){
 }
 /* ---------- progreso ---------- */
 let tab = "train", pickEx = null;
-const ORDER = [1,2,3,4,5].flatMap(d => PLAN[d].ex);
+let ORDER = [1,2,3,4,5].flatMap(d => PLAN[d].ex);
 const bodyOnly = x => EX[x].inc===0 && !EX[x].u;
 function metric(l){ const s = l.sets.filter(z=>z.reps>0); return bodyOnly(l.ex) ? Math.max(...s.map(z=>z.reps)) : Math.max(...s.map(z=>z.kg||0)); }
 function series(x){ return Object.values(logs).filter(l=>l.ex===x && l.sets?.length).sort((a,b)=>a.date<b.date?-1:1).map(l=>({date:l.date, v:metric(l), l})); }
-function withData(){ return ORDER.filter(x => series(x).length); }
+function withData(){ return [...new Set([...ORDER, ...Object.values(logs).map(l => l.ex)])].filter(x => EX[x] && series(x).length); }
 function weekStart(d){ const s = new Date(d); s.setDate(s.getDate()-((s.getDay()+6)%7)); return iso(s); }
 function renderProg(){
   const dates = [...trainedDates()];
@@ -573,7 +647,7 @@ function renderProg(){
   const ex = withData();
   const upN = ex.filter(x => { const s = series(x); return s.length>1 && s[s.length-1].v > s[0].v; }).length;
   document.getElementById("s-ses").textContent = dates.length;
-  document.getElementById("s-week").textContent = dates.filter(d => d >= ws && d <= iso(today)).length + "/5";
+  document.getElementById("s-week").textContent = dates.filter(d => d >= ws && d <= iso(today)).length + "/" + Object.keys(PLAN).length;
   document.getElementById("s-up").textContent = upN;
   renderWeight();
   const pick = document.getElementById("pick");
@@ -718,12 +792,13 @@ window.addEventListener("resize", () => { if(tab==="prog"){ if(withData().length
 document.getElementById("pick").onchange = ev => { pickEx = ev.target.value; drawChart(); };
 function setTab(t){
   tab = t;
-  ["train","mus","prog"].forEach(k => { document.getElementById("v-"+k).hidden = t!==k; document.getElementById("tab-"+k).setAttribute("aria-pressed", t===k); });
+  ["train","mus","cat","prog"].forEach(k => { document.getElementById("v-"+k).hidden = t!==k; document.getElementById("tab-"+k).setAttribute("aria-pressed", t===k); });
   render();
 }
 document.getElementById("tab-train").onclick = () => setTab("train");
 document.getElementById("tab-mus").onclick = () => setTab("mus");
 document.getElementById("tab-prog").onclick = () => setTab("prog");
+document.getElementById("tab-cat").onclick = () => { catPickDay = null; setTab("cat"); };
 
 /* ---------- músculos ---------- */
 const MUS = {
@@ -826,17 +901,183 @@ function renderMus(){
   document.querySelectorAll("#mlist .mrow").forEach(b => b.onclick = () => { selMus = selMus===b.dataset.mk ? null : b.dataset.mk; renderMus(); });
   const det = document.getElementById("mdetail");
   if(!selMus){ det.innerHTML = ""; return; }
-  const dayOf = x => { const d = Object.keys(PLAN).find(d => PLAN[d].ex.includes(x)); return d ? DIAS[d] : ""; };
-  const pri = Object.keys(EXM).filter(x => EXM[x].p.includes(selMus)), sec = Object.keys(EXM).filter(x => EXM[x].s.includes(selMus));
+  const dayOf = x => Object.keys(PLAN).filter(d => PLAN[d].ex.includes(x)).map(d => DIAS[d]).join(", ");
+  const mine = new Set(Object.values(PLAN).flatMap(d => d.ex));
+  const pri = [...mine].filter(x => EXM[x]?.p.includes(selMus)), sec = [...mine].filter(x => EXM[x]?.s.includes(selMus));
   const line = x => `<div class="exline"><span>${esc(EX[x].n)}</span><span class="d">${dayOf(x)} · ${EX[x].s} series</span></div>`;
   det.innerHTML = `<div class="mdetail"><h3>${MUS[selMus]}</h3>
     ${MUS_NOTE[selMus]?`<p class="note" style="margin:0">${MUS_NOTE[selMus]}</p>`:""}
     ${pri.length?`<div class="lbl">Lo trabajan como principal</div>${pri.map(line).join("")}`:""}
     ${sec.length?`<div class="lbl">Ayudan</div>${sec.map(line).join("")}`:""}
-    ${!pri.length&&!sec.length?`<p class="empty" style="margin:0">Ningún ejercicio de tu rutina lo trabaja.</p>`:""}</div>`;
+    ${!pri.length&&!sec.length?`<p class="empty" style="margin:0">Ningún ejercicio de tu rutina lo trabaja.</p>`:""}
+    ${grupoDe(selMus)?`<div class="actions"><button class="btn sec" type="button" id="m-cat">Ver máquinas para ${esc(GRUPOS[grupoDe(selMus)].n.toLowerCase())}</button></div>`:""}</div>`;
+  const mc = document.getElementById("m-cat"); if(mc) mc.onclick = () => { catMus = grupoDe(selMus); catZone = "all"; catPickDay = null; setTab("cat"); };
 }
 document.getElementById("mv-week").onclick = () => { musView = "week"; document.getElementById("mv-week").setAttribute("aria-pressed","true"); document.getElementById("mv-plan").setAttribute("aria-pressed","false"); renderMus(); };
 document.getElementById("mv-plan").onclick = () => { musView = "plan"; document.getElementById("mv-plan").setAttribute("aria-pressed","true"); document.getElementById("mv-week").setAttribute("aria-pressed","false"); renderMus(); };
+
+/* ---------- catálogo de ejercicios (máquinas y poleas) ---------- */
+/* CAT-START */
+const CAT = {"Cable_Chest_Press":["Press de pecho en polea","c","pecho","delt_front triceps",["De espaldas a las poleas, un agarre en cada mano a la altura del pecho.","Empuja al frente hasta casi estirar los brazos.","Regresa controlado hasta sentir el pecho estirado."],"Un pie adelante y abdomen firme para no arquear la espalda.",0,1],"Cable_Crossover":["Cruce de poleas (alto)","c","pecho","delt_front",["Poleas altas, un agarre en cada mano, un paso al frente.","Junta las manos abajo y al frente en un arco, codos apenas flexionados.","Abre lento hasta sentir el estiramiento."],"",0,0],"Cable_Iron_Cross":["Cruz de hierro en polea","c","pecho","delt_front",["Poleas altas, de pie en el centro con los brazos en T.","Baja los brazos hacia los costados sin doblar los codos.","Sube lento a la posición de T."],"",0,0],"Decline_Smith_Press":["Press declinado en Smith","m","pecho","delt_front triceps",["Banco declinado bajo la barra de la Smith.","Baja la barra a la parte baja del pecho.","Empuja sin bloquear los codos."],"Con la cabeza más baja que la cadera; si te mareas o molesta la espalda, usa la versión plana.",0,1],"Flat_Bench_Cable_Flyes":["Aperturas en banco plano con polea","c","pecho","delt_front",["Banco plano entre dos poleas bajas, un agarre en cada mano.","Brazos arriba, codos apenas flexionados.","Abre en arco hasta sentir el estiramiento y vuelve a juntar."],"",0,0],"Incline_Cable_Chest_Press":["Press inclinado con polea","c","pecho delt_front","triceps",["Banco inclinado a 30° entre dos poleas bajas.","Empuja hacia arriba juntando un poco las manos.","Baja controlado a los lados del pecho."],"",0,1],"Incline_Cable_Flye":["Aperturas inclinadas con polea","c","pecho","delt_front",["Banco inclinado a 30° entre dos poleas bajas.","Junta las manos arriba en un arco, codos apenas flexionados.","Abre lento hasta sentir el pecho estirado."],"",0,0],"Leverage_Chest_Press":["Press de pecho en máquina (palanca)","m","pecho","delt_front triceps",["Asiento a la altura que deje los agarres a nivel del pecho.","Empuja al frente sin bloquear los codos.","Regresa lento hasta sentir el estiramiento."],"Espalda apoyada todo el tiempo: es de las opciones más seguras para la lumbar.",0,1],"Leverage_Decline_Chest_Press":["Press declinado en máquina","m","pecho","delt_front triceps",["Ajusta el asiento para que los agarres queden a la altura de la parte baja del pecho.","Empuja hacia abajo y al frente.","Regresa controlado."],"",0,1],"Leverage_Incline_Chest_Press":["Press inclinado en máquina","m","pecho delt_front","triceps",["Asiento a la altura que deje los agarres a nivel de la parte alta del pecho.","Empuja hacia arriba y al frente.","Baja lento sin soltar la tensión."],"Espalda apoyada: carga el pecho alto sin exigir a la lumbar.",0,1],"Low_Cable_Crossover":["Cruce de poleas (bajo)","c","pecho","delt_front",["Poleas bajas, un paso al frente.","Sube las manos al frente a la altura del pecho alto, en un arco.","Baja lento hasta sentir el estiramiento."],"",0,0],"Machine_Bench_Press":["Press de banca en máquina","m","pecho","delt_front triceps",["Acostado en la máquina, agarres a la altura del pecho.","Empuja hacia arriba sin bloquear los codos.","Baja controlado."],"",0,1],"Single-Arm_Cable_Crossover":["Cruce de polea a un brazo","c","pecho","",["De lado a una polea alta, agarre con una mano y el brazo abierto hacia la polea.","Lleva la mano en arco hacia la cadera contraria.","Vuelve lento y cambia de lado."],"",0,0],"Smith_Machine_Bench_Press":["Press de banca en Smith","s","pecho","delt_front triceps",["Banco plano bajo la barra, que baje a la parte baja del pecho.","Desbloquea y baja controlado.","Empuja sin rebotar."],"Pies firmes y cadera pegada al banco.",0,1],"Smith_Machine_Decline_Press":["Press declinado en Smith (variante)","s","pecho","delt_front triceps",["Banco declinado bajo la barra.","Baja a la parte baja del pecho.","Empuja sin bloquear."],"",0,1],"Smith_Machine_Incline_Bench_Press":["Press inclinado en Smith","s","pecho delt_front","triceps",["Banco a 30° bajo la barra, que baje a la parte alta del pecho.","Desbloquea y baja controlado.","Empuja hacia arriba."],"",0,1],"Standing_Cable_Chest_Press":["Press de pecho de pie en polea","c","pecho","delt_front triceps",["De espaldas a las poleas, un pie adelante.","Empuja al frente juntando las manos.","Regresa controlado."],"Abdomen apretado y torso quieto; si arqueas la espalda, baja el peso.",1,1],"Close-Grip_Front_Lat_Pulldown":["Jalón al pecho agarre cerrado","c","dorsal","biceps delt_rear trapecio",["Agarre de la barra a la anchura de los hombros.","Lleva la barra a la parte alta del pecho bajando los codos.","Sube lento hasta estirar los brazos."],"Tronco casi vertical, sin tirarte hacia atrás.",0,1],"Full_Range-Of-Motion_Lat_Pulldown":["Jalón al pecho recorrido completo","c","dorsal","biceps delt_rear trapecio",["Agarre ancho, deja que los brazos suban del todo arriba.","Baja la barra al pecho pensando en los codos.","Sube estirando por completo."],"",0,1],"Kneeling_High_Pulley_Row":["Remo alto de rodillas en polea","c","dorsal","biceps trapecio",["De rodillas frente a la polea alta, agarre con los brazos estirados.","Tira hacia el pecho juntando las escápulas.","Estira lento."],"",0,1],"Kneeling_Single-Arm_High_Pulley_Row":["Remo alto a un brazo de rodillas","c","dorsal","biceps trapecio",["De rodillas, agarre de una mano en la polea alta.","Tira el codo hacia la cadera.","Estira lento y cambia de lado."],"",0,1],"Leverage_High_Row":["Remo alto en máquina","m","trapecio dorsal","biceps delt_rear",["Asiento ajustado para alcanzar los agarres arriba; rodillas bajo el rodillo.","Tira hacia el pecho juntando las escápulas.","Regresa lento."],"",0,1],"Leverage_Iso_Row":["Remo en máquina con apoyo de pecho","m","dorsal trapecio","biceps delt_rear",["Pecho apoyado, agarres a la altura del pecho.","Tira hacia el torso juntando las escápulas.","Estira lento sin despegar el pecho."],"Con el pecho apoyado la lumbar no sostiene peso: de los mejores remos para ti.",0,1],"Lying_T-Bar_Row":["Remo T en máquina (pecho apoyado)","m","trapecio dorsal","biceps delt_rear",["Boca abajo sobre el apoyo, agarres colgando.","Tira hacia el pecho juntando las escápulas.","Baja hasta estirar."],"Pecho apoyado: seguro para la lumbar.",0,1],"One_Arm_Lat_Pulldown":["Jalón a un brazo","c","dorsal","biceps",["Agarre de una mano en la polea alta.","Baja el codo hacia la cadera.","Sube lento y cambia de lado."],"",0,1],"Rope_Straight-Arm_Pulldown":["Pullover en polea con cuerda","c","dorsal","triceps",["Cuerda en la polea alta, brazos casi rectos.","Lleva la cuerda hasta los muslos en un arco.","Sube controlado."],"Leve inclinación con espalda recta y abdomen firme.",0,0],"Seated_One-arm_Cable_Pulley_Rows":["Remo sentado a un brazo en polea","c","dorsal trapecio","biceps delt_rear",["Sentado, agarre de una mano, pecho alto.","Tira hacia la cadera sin girar el torso.","Estira lento."],"Torso quieto: no gires ni te balancees.",1,1],"Shotgun_Row":["Remo a un brazo de pie en polea","c","dorsal","biceps trapecio",["Polea baja, piernas separadas en paso largo.","Tira girando la palma hacia arriba al final.","Regresa lento."],"De pie e inclinado: abdomen firme y peso moderado.",1,1],"Smith_Machine_Bent_Over_Row":["Remo inclinado en Smith","s","trapecio dorsal","biceps delt_rear",["De pie, torso inclinado hacia adelante.","Tira la barra hacia el abdomen.","Baja controlado."],"Inclinado sin apoyo, la lumbar sostiene todo el peso. Mejor usa el remo con apoyo de pecho.",2,1],"Underhand_Cable_Pulldowns":["Jalón agarre supino","c","dorsal","biceps trapecio",["Agarre con palmas hacia ti, a la anchura de los hombros.","Baja la barra al pecho.","Sube lento."],"",0,1],"V-Bar_Pulldown":["Jalón con triángulo (agarre en V)","c","dorsal","biceps trapecio",["Agarre en V en la polea alta.","Baja hacia la parte alta del pecho con el pecho alto.","Sube estirando los brazos."],"",0,1],"Alternating_Cable_Shoulder_Press":["Press de hombro alterno en polea","c","delt_front","delt_side triceps",["Entre dos poleas bajas, agarres a la altura de los hombros.","Empuja un brazo arriba y luego el otro.","Baja controlado."],"De pie: abdomen firme, sin arquear.",1,1],"Bent_Over_Low-Pulley_Side_Lateral":["Elevación posterior inclinado en polea","c","delt_rear","trapecio",["Polea baja, torso inclinado hacia adelante.","Abre el brazo hacia el lado.","Baja lento."],"Inclinado sin apoyo carga la lumbar. Prefiere el contractor inverso o el face pull.",2,0],"Cable_Internal_Rotation":["Rotación interna en polea","c","delt_front","",["De lado a la polea a la altura del codo, codo pegado al cuerpo a 90°.","Lleva la mano hacia el abdomen.","Vuelve lento. Peso ligero."],"",0,1],"Cable_Rear_Delt_Fly":["Apertura posterior en polea","c","delt_rear","trapecio",["Poleas altas cruzadas, un agarre en cada mano.","Abre los brazos hacia atrás a la altura de los hombros.","Regresa lento."],"",0,0],"Cable_Rope_Rear-Delt_Rows":["Remo posterior con cuerda","c","delt_rear","trapecio biceps",["Cuerda en la polea a la altura del pecho.","Tira hacia la cara con los codos altos.","Estira lento."],"",0,1],"Cable_Seated_Lateral_Raise":["Elevación lateral sentado en polea","c","delt_side","trapecio",["Sentado de lado a la polea baja.","Sube el brazo hasta la altura del hombro.","Baja lento."],"Sentado no balanceas el cuerpo.",0,0],"Cable_Shoulder_Press":["Press de hombro en polea","c","delt_front","delt_side triceps",["Entre dos poleas bajas, agarres a la altura de los hombros.","Empuja hacia arriba.","Baja controlado."],"De pie el peso baja por la columna. Mejor la versión sentada o en máquina.",1,1],"Cable_Shrugs":["Encogimientos en polea","c","trapecio","",["Barra en la polea baja, brazos estirados.","Sube los hombros hacia las orejas y aguanta 1 s.","Baja lento."],"",0,0],"External_Rotation_with_Cable":["Rotación externa en polea","c","delt_rear","",["Polea a la altura del codo, codo pegado al cuerpo a 90°.","Gira la mano hacia afuera.","Vuelve lento. Peso ligero: es para el manguito rotador."],"",0,0],"Front_Cable_Raise":["Elevación frontal en polea","c","delt_front","",["De espaldas a la polea baja, agarre entre las piernas.","Sube el brazo al frente hasta la altura del hombro.","Baja lento."],"",0,0],"Leverage_Shoulder_Press":["Press de hombro en máquina (palanca)","m","delt_front","delt_side triceps",["Sentado, agarres a la altura de los hombros.","Empuja hacia arriba sin bloquear.","Baja hasta la altura de las orejas."],"Sentado con respaldo: la forma segura de hacer press de hombro.",0,1],"Leverage_Shrug":["Encogimientos en máquina","m","trapecio","antebrazo",["Agarres a los lados, brazos estirados.","Sube los hombros hacia las orejas.","Baja lento."],"",0,0],"Low_Pulley_Row_To_Neck":["Remo al cuello en polea baja","c","delt_rear","trapecio biceps",["Sentado, cuerda en la polea baja, espalda recta.","Tira hacia el cuello con los codos altos.","Estira lento."],"",0,1],"Seated_Cable_Shoulder_Press":["Press de hombro sentado en polea","c","delt_front","delt_side triceps",["Banco con respaldo entre dos poleas bajas.","Empuja hacia arriba.","Baja a la altura de las orejas."],"Sentado con respaldo: mejor que de pie.",0,1],"Smith_Machine_Behind_the_Back_Shrug":["Encogimientos por detrás en Smith","s","trapecio","",["De espaldas a la barra, agarre por detrás.","Sube los hombros.","Baja lento."],"",0,0],"Smith_Machine_One-Arm_Upright_Row":["Remo al mentón a un brazo en Smith","s","delt_side","trapecio biceps",["De lado a la barra, agarre con una mano.","Sube el codo hasta la altura del hombro.","Baja lento."],"No subas el codo por encima del hombro.",0,1],"Smith_Machine_Overhead_Shoulder_Press":["Press de hombro en Smith","s","delt_front","delt_side triceps",["Sentado en banco con respaldo bajo la barra.","Empuja hacia arriba.","Baja a la altura de la barbilla."],"Hazlo sentado con respaldo, nunca de pie.",1,1],"Smith_Machine_Upright_Row":["Remo al mentón en Smith","s","trapecio delt_side","biceps",["Agarre a la anchura de los hombros.","Sube la barra pegada al cuerpo hasta el pecho.","Baja lento."],"No subas por encima del pecho: puede pinzar el hombro.",0,1],"Standing_Low-Pulley_Deltoid_Raise":["Elevación lateral de pie en polea","c","delt_side","antebrazo",["De lado a la polea baja, agarre cruzando por delante del cuerpo.","Sube el brazo hasta la altura del hombro.","Baja lento."],"",0,0],"Upright_Cable_Row":["Remo al mentón en polea","c","trapecio delt_side","",["Barra en la polea baja.","Sube pegada al cuerpo hasta el pecho.","Baja lento."],"",0,1],"Cable_Hammer_Curls_-_Rope_Attachment":["Curl martillo con cuerda","c","biceps antebrazo","",["Cuerda en la polea baja, palmas mirándose.","Sube sin mover los codos.","Baja lento."],"",0,0],"Cable_Preacher_Curl":["Curl Scott en polea","c","biceps","antebrazo",["Banco Scott frente a la polea baja.","Sube hasta casi vertical.","Baja lento sin estirar de golpe."],"",0,0],"Cable_Wrist_Curl":["Curl de muñeca en polea","c","antebrazo","",["Sentado, antebrazos sobre los muslos, barra de la polea baja.","Sube flexionando solo la muñeca.","Baja lento."],"",0,0],"High_Cable_Curls":["Curl en polea alta (doble bíceps)","c","biceps","",["Entre dos poleas altas, brazos en cruz.","Lleva las manos hacia las orejas.","Estira lento."],"",0,1],"Lying_Cable_Curl":["Curl acostado en polea","c","biceps","",["Acostado en el suelo con los pies hacia la polea baja.","Sube la barra hacia el pecho sin mover los codos.","Baja lento."],"Acostado la espalda descansa.",0,0],"Machine_Bicep_Curl":["Curl de bíceps en máquina","m","biceps","",["Brazos apoyados en el cojín, codos alineados con el eje.","Sube hasta contraer.","Baja lento."],"",0,0],"Machine_Preacher_Curls":["Curl Scott en máquina","m","biceps","",["Axilas en el borde del cojín.","Sube hasta casi vertical.","Baja lento."],"",0,0],"Overhead_Cable_Curl":["Curl en polea alta a un brazo","c","biceps","",["De lado a la polea alta, brazo extendido a la altura del hombro.","Lleva la mano hacia la cabeza.","Estira lento."],"",0,0],"Reverse_Cable_Curl":["Curl inverso en polea","c","antebrazo biceps","",["Barra en la polea baja, palmas hacia abajo.","Sube sin mover los codos.","Baja lento."],"",0,0],"Seated_Two-Arm_Palms-Up_Low-Pulley_Wrist_Curl":["Curl de muñeca sentado en polea baja","c","antebrazo","",["Sentado frente a la polea baja, antebrazos sobre los muslos.","Palmas arriba, sube flexionando la muñeca.","Baja lento."],"",0,0],"Standing_Biceps_Cable_Curl":["Curl de bíceps en polea","c","biceps","antebrazo",["Barra en la polea baja, codos pegados.","Sube sin balancear.","Baja en 2–3 s."],"Sin balanceo del cuerpo.",0,0],"Standing_One-Arm_Cable_Curl":["Curl a un brazo en polea","c","biceps","",["Agarre de una mano en la polea baja.","Sube sin mover el codo.","Baja lento y cambia de lado."],"",0,0],"Cable_Incline_Triceps_Extension":["Extensión de tríceps inclinado en polea","c","triceps","",["Banco inclinado de espaldas a la polea alta, barra sobre la cabeza.","Extiende los brazos sin mover los codos.","Vuelve lento."],"",0,0],"Cable_Lying_Triceps_Extension":["Press francés en polea","c","triceps","",["Acostado en banco con la cabeza hacia la polea baja.","Extiende los brazos hacia arriba, codos fijos.","Baja hacia la frente."],"",0,0],"Cable_One_Arm_Tricep_Extension":["Jalón de tríceps a un brazo","c","triceps","",["Agarre de una mano en la polea alta.","Empuja hacia abajo con el codo pegado.","Sube a 90°."],"",0,0],"Dip_Machine":["Fondos en máquina","m","triceps","pecho delt_front",["Sentado, agarres a los lados.","Empuja hacia abajo hasta casi estirar los brazos.","Sube controlado."],"Sentado y con respaldo: mejor que los fondos libres.",0,1],"Kneeling_Cable_Triceps_Extension":["Extensión de tríceps arrodillado en polea","c","triceps","",["De rodillas de espaldas a la polea alta, brazos sobre un banco.","Extiende los brazos al frente.","Vuelve lento."],"",0,0],"Low_Cable_Triceps_Extension":["Extensión de tríceps acostado en polea baja","c","triceps","",["Acostado con la cabeza hacia la polea, cuerda en las manos.","Extiende los brazos hacia arriba.","Baja lento."],"",0,0],"Machine_Triceps_Extension":["Extensión de tríceps en máquina","m","triceps","",["Brazos sobre el cojín, codos alineados con el eje.","Extiende hasta casi bloquear.","Vuelve lento."],"",0,0],"Reverse_Grip_Triceps_Pushdown":["Jalón de tríceps agarre supino","c","triceps","",["Barra en la polea alta, palmas hacia arriba.","Empuja hacia abajo con los codos pegados.","Sube a 90°."],"",0,0],"Smith_Machine_Close-Grip_Bench_Press":["Press cerrado en Smith","s","triceps","pecho delt_front",["Agarre a la anchura de los hombros.","Baja con los codos pegados al cuerpo.","Empuja sin bloquear."],"",0,1],"Standing_Low-Pulley_One-Arm_Triceps_Extension":["Extensión de tríceps a un brazo sobre la cabeza","c","triceps","",["De espaldas a la polea baja, agarre detrás de la cabeza.","Extiende el brazo hacia arriba.","Baja lento."],"",0,0],"Triceps_Overhead_Extension_with_Rope":["Extensión sobre la cabeza con cuerda (alta)","c","triceps","",["De espaldas a la polea, cuerda detrás de la cabeza.","Extiende al frente y arriba.","Vuelve hasta estirar."],"Un pie adelante y abdomen firme.",0,0],"Triceps_Pushdown":["Jalón de tríceps con barra","c","triceps","",["Barra recta en la polea alta, codos pegados.","Empuja hasta estirar los brazos.","Sube a 90°."],"",0,0],"Triceps_Pushdown_-_V-Bar_Attachment":["Jalón de tríceps con barra en V","c","triceps","",["Barra en V en la polea alta, codos pegados.","Empuja hasta estirar.","Sube a 90°."],"",0,0],"Cable_Deadlifts":["Peso muerto en polea","c","gluteos isquios","lumbar cuadriceps antebrazo",["Polea baja, barra entre las piernas.","Levántate extendiendo cadera y rodillas.","Baja con la espalda recta."],"Carga directa sobre la lumbar. Con hernia, evítalo salvo que tu médico lo autorice.",2,1],"Cable_Hip_Adduction":["Aductores en polea","c","aductores","",["Tobillera en la polea baja, de lado.","Lleva la pierna hacia adentro cruzando la otra.","Vuelve lento."],"",0,0],"Calf_Press":["Pantorrilla en máquina de prensa","m","gemelos","",["Sentado, puntas de los pies en el borde de la plataforma.","Empuja con las puntas.","Baja hasta estirar."],"Sin carga en la espalda.",0,0],"Calf_Press_On_The_Leg_Press_Machine":["Pantorrilla en la prensa de piernas","m","gemelos","",["En la prensa, solo las puntas en el borde de la plataforma.","Empuja con las puntas, rodillas casi estiradas.","Baja lento hasta estirar."],"Sin carga en la columna: alternativa segura a la pantorrilla de pie.",0,0],"Glute_Ham_Raise":["Curl nórdico en máquina (glute-ham)","m","isquios","gluteos gemelos",["Pies trabados, rodillas detrás del cojín.","Sube flexionando las rodillas con el cuerpo recto.","Baja lento."],"Exige mucho y cuesta mantener la espalda neutra. Con cuidado o mejor el curl femoral sentado.",1,1],"Hack_Squat":["Sentadilla hack","m","cuadriceps gluteos","isquios aductores",["Espalda pegada al respaldo, hombros bajo las almohadillas.","Baja hasta 90° de rodilla.","Sube empujando con todo el pie."],"Las almohadillas cargan la columna. Peso moderado y no bajes tanto que la pelvis se despegue.",1,1],"Leg_Extensions":["Extensión de cuádriceps","m","cuadriceps","",[],"",0,0],"Leverage_Deadlift":["Peso muerto en máquina","m","gluteos isquios","lumbar cuadriceps",["Entre los agarres, cadera baja, pecho alto.","Levántate extendiendo cadera y rodillas.","Baja controlado."],"Aunque es máquina, carga la lumbar. Evítalo salvo autorización médica.",2,1],"Lying_Leg_Curls":["Curl femoral acostado","m","isquios","gemelos",["Boca abajo, rodillo sobre los tobillos.","Flexiona hasta atrás.","Baja lento."],"Es fácil levantar la cadera y arquear la lumbar. Prefiere el curl sentado.",1,0],"Lying_Machine_Squat":["Sentadilla en máquina acostado","m","cuadriceps gluteos","isquios",["Acostado boca arriba en la máquina, hombros bajo las almohadillas.","Empuja hasta casi estirar las piernas.","Baja hasta 90°."],"Espalda apoyada: menos carga lumbar que la sentadilla de pie.",0,1],"Narrow_Stance_Hack_Squats":["Sentadilla hack pies juntos","m","cuadriceps","gluteos",["Pies juntos en la plataforma, espalda pegada.","Baja hasta 90°.","Sube sin bloquear."],"Peso moderado; la carga va por los hombros.",1,1],"Narrow_Stance_Leg_Press":["Prensa pies juntos","m","cuadriceps","gluteos",["Pies juntos en el centro de la plataforma.","Baja hasta 90° de rodilla.","Empuja sin bloquear."],"Que la pelvis no se despegue del respaldo.",0,1],"One-Legged_Cable_Kickback":["Patada de glúteo en polea","c","gluteos","isquios",[],"",0,0],"Pull_Through":["Pull through en polea","c","gluteos isquios","lumbar",["De espaldas a la polea baja, cuerda entre las piernas.","Empuja la cadera al frente hasta quedar de pie.","Baja inclinando la cadera hacia atrás."],"Es una bisagra de cadera: carga la lumbar. Mejor hip thrust o patada en polea.",2,1],"Reverse_Hyperextension":["Hiperextensión inversa","m","gluteos isquios","lumbar",["Boca abajo en el banco, piernas colgando.","Sube las piernas hasta la línea del cuerpo.","Baja controlado."],"Algunos fisioterapeutas la usan para hernia, pero con poco peso y supervisión. Consúltalo antes.",2,0],"Seated_Calf_Raise":["Pantorrilla sentado","m","gemelos","",[],"",0,0],"Seated_Leg_Curl":["Curl femoral sentado","m","isquios","gemelos",[],"",0,0],"Single-Leg_Leg_Extension":["Extensión de cuádriceps a una pierna","m","cuadriceps","",["Igual que la extensión normal, una pierna a la vez.","Extiende y aprieta 1 s.","Baja lento y cambia."],"",0,0],"Smith_Machine_Calf_Raise":["Pantorrilla de pie en Smith","s","gemelos","",["Barra sobre los hombros, puntas en un escalón.","Sube lo más alto posible.","Baja hasta estirar."],"La barra carga la columna. Mejor sentado o en la prensa.",2,0],"Smith_Machine_Leg_Press":["Prensa en Smith (acostado)","s","cuadriceps gluteos","isquios",["Acostado bajo la barra, pies en la barra.","Empuja hacia arriba sin bloquear.","Baja controlado."],"",1,1],"Smith_Machine_Squat":["Sentadilla en Smith","s","cuadriceps gluteos","isquios aductores lumbar",["Barra sobre la parte alta de la espalda, pies un poco adelante.","Baja con el pecho alto.","Sube empujando el suelo."],"La barra carga la columna de arriba abajo. Prefiere prensa o sentadilla goblet.",2,1],"Smith_Machine_Stiff-Legged_Deadlift":["Peso muerto rumano en Smith","s","isquios","gluteos lumbar",["Barra delante de los muslos.","Baja la cadera hacia atrás con las piernas casi rectas.","Sube apretando glúteos."],"Bisagra de cadera con carga: riesgo directo para la hernia.",2,1],"Smith_Single-Leg_Split_Squat":["Zancada búlgara en Smith","s","cuadriceps gluteos","isquios",["Barra en la espalda, un pie atrás sobre un banco.","Baja la rodilla de atrás hacia el suelo.","Sube con la pierna de adelante."],"La barra carga la columna. Mejor con mancuernas ligeras o sin peso.",1,1],"Standing_Calf_Raises":["Pantorrilla de pie en máquina","m","gemelos","",["Hombros bajo las almohadillas, puntas en el escalón.","Sube lo más alto posible.","Baja hasta estirar."],"Las almohadillas cargan la columna. Prefiere sentado o en la prensa.",2,0],"Standing_Leg_Curl":["Curl femoral de pie","m","isquios","",["De pie en la máquina, una pierna bajo el rodillo.","Flexiona la rodilla hacia atrás.","Baja lento y cambia."],"Torso quieto, sin arquear.",0,0],"Thigh_Abductor":["Abductores en máquina","m","gluteos","",[],"",0,0],"Thigh_Adductor":["Aductores en máquina","m","aductores","",["Espalda apoyada, piernas abiertas sobre los cojines.","Cierra las piernas apretando.","Abre lento."],"",0,0],"Ab_Crunch_Machine":["Crunch en máquina","m","abdomen","",["Sentado, agarres arriba.","Encoge el tronco hacia las rodillas.","Vuelve lento."],"Flexiona la columna con carga: con hernia conviene evitarlo.",2,0],"Cable_Crunch":["Crunch en polea arrodillado","c","abdomen","",["De rodillas frente a la polea alta, cuerda junto a la cabeza.","Encoge el tronco hacia el suelo.","Sube lento."],"Flexión de columna con carga: evítalo con hernia.",2,0],"Cable_Reverse_Crunch":["Crunch inverso en polea","c","abdomen","",["Acostado, tobillera en la polea baja.","Lleva las rodillas al pecho levantando la cadera.","Baja lento."],"Flexiona la lumbar: evítalo con hernia.",2,0],"Cable_Russian_Twists":["Giro ruso en polea","c","oblicuos","abdomen",["Sentado de lado a la polea.","Gira el tronco alejándote.","Vuelve lento."],"Rotación de columna con carga: de lo que más conviene evitar con hernia. Usa el Pallof.",2,1],"Cable_Seated_Crunch":["Crunch sentado en polea","c","abdomen","",["Sentado de espaldas a la polea alta.","Encoge el tronco hacia adelante.","Vuelve lento."],"Flexión con carga: evítalo con hernia.",2,0],"Kneeling_Cable_Crunch_With_Alternating_Oblique_Twists":["Crunch en polea con giro","c","oblicuos","abdomen",["De rodillas frente a la polea alta.","Encoge y gira hacia un lado.","Sube y alterna."],"Flexión + rotación con carga: evítalo con hernia.",2,0],"One-Arm_High-Pulley_Cable_Side_Bends":["Inclinación lateral en polea alta","c","oblicuos","",["De lado a la polea alta, agarre con una mano.","Inclínate hacia el lado contrario.","Vuelve lento."],"Flexión lateral con carga: con cuidado y poco peso.",1,0],"Pallof_Press_With_Rotation":["Pallof press con giro","c","oblicuos","abdomen",["Igual que el Pallof, pero al estirar gira un poco el tronco.","Vuelve al centro.","Cambia de lado."],"Agrega rotación: el Pallof normal es más seguro para ti.",1,1],"Rope_Crunch":["Crunch con cuerda","c","abdomen","",["De rodillas frente a la polea alta.","Encoge el tronco.","Sube lento."],"Flexión de columna con carga: evítalo con hernia.",2,0],"Standing_Cable_Lift":["Leñador de abajo hacia arriba","c","oblicuos","abdomen delt_front",["Polea baja, de lado.","Lleva el agarre en diagonal hacia arriba.","Baja lento."],"Rotación con carga: evítalo o hazlo muy ligero con supervisión.",2,1],"Standing_Cable_Wood_Chop":["Leñador de arriba hacia abajo","c","oblicuos","abdomen delt_front",["Polea alta, de lado.","Lleva el agarre en diagonal hacia abajo.","Sube lento."],"Rotación con carga: evítalo o hazlo muy ligero con supervisión.",2,1],"Standing_Rope_Crunch":["Crunch de pie con cuerda","c","abdomen","",["De espaldas a la polea alta, cuerda junto a la cabeza.","Encoge el tronco.","Sube lento."],"Flexión con carga: evítalo con hernia.",2,0]};
+/* CAT-END */
+const EQN = {m:"Máquina", c:"Polea", s:"Smith", l:"Peso libre", p:"Peso corporal"};
+const REC = new Set(Object.values(DEFAULT_PLAN).flatMap(d => d.ex));
+const yList = a => a.length < 2 ? (a[0]||"") : a.slice(0,-1).join(", ") + " y " + a[a.length-1];
+Object.entries(EX).forEach(([k,e]) => { e.eq = !e.u ? "p" : e.u.includes("polea") ? "c" : e.u.includes("máquina") ? "m" : "l"; e.risk = 0; e.rec = REC.has(k); });
+const IMG2ID = {}; Object.entries(EX).forEach(([k,e]) => IMG2ID[e.img] = k);
+Object.entries(CAT).forEach(([id,[n,eq,p,s,t,l,risk,comp]]) => {
+  if(IMG2ID[id]) return; // ya está en la rutina recomendada
+  const pr = p.split(" "), sc = s ? s.split(" ") : [];
+  const small = pr.some(k => ["abdomen","oblicuos","gemelos","antebrazo"].includes(k));
+  EX[id] = {n, m: yList(pr.map(k => MUS[k])), img:id, s:3, r: small ? [12,15] : comp ? [8,12] : [10,15],
+    u: eq==="c" ? "kg polea" : eq==="s" ? "kg por lado" : "kg máquina", inc: eq==="m" ? 5 : 2.5, t, l, eq, risk, rec:false};
+  EXM[id] = {p:pr, s:sc};
+});
+const GRUPOS = {
+  pecho:{n:"Pecho",k:["pecho"],z:"sup"}, espalda:{n:"Espalda",k:["dorsal","trapecio"],z:"sup"},
+  hombro:{n:"Hombro",k:["delt_front","delt_side","delt_rear"],z:"sup"}, biceps:{n:"Bíceps",k:["biceps"],z:"sup"},
+  triceps:{n:"Tríceps",k:["triceps"],z:"sup"}, antebrazo:{n:"Antebrazo",k:["antebrazo"],z:"sup"},
+  abdomen:{n:"Abdomen",k:["abdomen","oblicuos"],z:"core"},
+  gluteos:{n:"Glúteos",k:["gluteos"],z:"inf"}, cuadriceps:{n:"Cuádriceps",k:["cuadriceps"],z:"inf"},
+  isquios:{n:"Isquios",k:["isquios"],z:"inf"}, aductores:{n:"Aductores",k:["aductores"],z:"inf"}, gemelos:{n:"Pantorrilla",k:["gemelos"],z:"inf"}
+};
+const grupoDe = m => Object.keys(GRUPOS).find(g => GRUPOS[g].k.includes(m)) || null;
+function dayChips(exs){
+  const c = {}; exs.forEach(x => (EXM[x]?.p||[]).forEach(k => c[k] = (c[k]||0) + EX[x].s));
+  return Object.entries(c).sort((a,b) => b[1]-a[1]).slice(0,3).map(([k]) => MUS[k]);
+}
+
+/* ---------- rutina personalizada ---------- */
+const clone = o => JSON.parse(JSON.stringify(o));
+const ORDEN_DIAS = [1,2,3,4,5,6,0], DCORTO = ["D","L","M","X","J","V","S"];
+function curDias(){ return clone(rutina?.dias || DEFAULT_PLAN); }
+function applyRutina(){
+  const src = rutina?.dias || DEFAULT_PLAN, next = {};
+  Object.entries(src).forEach(([d,v]) => { const ex = (v.ex||[]).filter(x => EX[x]); if(ex.length) next[d] = {t: v.t || "Entrenamiento", ex}; });
+  PLAN = next;
+  ORDER = ORDEN_DIAS.flatMap(d => PLAN[d]?.ex || []);
+}
+const planKey = dias => JSON.stringify(ORDEN_DIAS.filter(d => dias[d]?.ex?.length).map(d => [d, dias[d].t, dias[d].ex]));
+const esRecomendada = () => !rutina?.dias || planKey(rutina.dias) === planKey(DEFAULT_PLAN);
+async function saveRutina(dias, ts){
+  const limpio = {}; Object.entries(dias).forEach(([d,v]) => limpio[d] = {t: v.t || "", ex: [...new Set(v.ex||[])]});
+  rutina = {tipo:"rutina", dias: limpio, ts: ts || Date.now()}; lsSave(); applyRutina();
+  if(col){ try{ await col.doc("rutina").set(rutina) }catch(e){} }
+}
+const daysOf = x => ORDEN_DIAS.filter(d => PLAN[d]?.ex.includes(x));
+const titleFor = x => { const g = grupoDe(EXM[x]?.p[0]); return g ? GRUPOS[g].n : "Entrenamiento"; };
+async function toggleDay(x, wd){
+  const dias = curDias(); const d = dias[wd] || (dias[wd] = {t: titleFor(x), ex: []});
+  if(!d.t) d.t = titleFor(x);
+  const i = d.ex.indexOf(x); if(i >= 0) d.ex.splice(i,1); else d.ex.push(x);
+  await saveRutina(dias);
+}
+function coverHtml(){
+  const v = volume("plan"), sin = Object.keys(MUS).filter(k => k!=="lumbar" && v[k]===0);
+  if(sin.length) return `<div class="cover warn"><b>Ojo:</b> con tu rutina actual no trabajas ${esc(yList(sin.map(k => MUS[k].toLowerCase())))}. Usa “Agregar ejercicios” y filtra por ese músculo.</div>`;
+  return `<div class="cover">Todos los grupos musculares tienen trabajo en la semana. En la pestaña Músculos ves cuántas series recibe cada uno.</div>`;
+}
+let editDay = null, resetAsk = false;
+function renderEditor(box, wd, fecha){
+  const dias = curDias(), d = dias[wd] || {t:"", ex:[]}, exs = d.ex.filter(x => EX[x]);
+  const rows = exs.map((x,i) => `<div class="edrow"><img src="${IMG(EX[x].img)[1]}" alt="" loading="lazy">
+    <div style="min-width:0"><div class="nm">${esc(EX[x].n)}</div><div class="exmeta">${esc(EX[x].m)} · ${EX[x].s} × ${EX[x].r[0]}–${EX[x].r[1]}${EX[x].risk===2?` · <b style="color:var(--bad)">riesgo lumbar</b>`:""}</div></div>
+    <div class="icons"><button type="button" data-mv="${i}" data-dir="-1" aria-label="Subir" ${i?"":"disabled"}>↑</button><button type="button" data-mv="${i}" data-dir="1" aria-label="Bajar" ${i<exs.length-1?"":"disabled"}>↓</button><button type="button" class="x" data-rm="${i}" aria-label="Quitar ${esc(EX[x].n)}">✕</button></div></div>`).join("");
+  box.innerHTML = `<div class="editor">
+    <div class="dayhead"><h2>Editar ${DIAS[wd]}</h2><span class="sub">Se repite todos los ${DIAS[wd]}</span></div>
+    <label for="ed-t">Nombre del día<input id="ed-t" value="${esc(d.t)}" placeholder="Ej.: Pierna" maxlength="30" autocomplete="off"></label>
+    ${rows || `<p class="rest" style="margin:0">Sin ejercicios: este día queda de descanso.</p>`}
+    <button class="btn sec" type="button" id="ed-add">+ Agregar ejercicios</button>
+    ${coverHtml()}
+    <div class="actions"><button class="btn pri" type="button" id="ed-done">Listo</button><span class="status">Los cambios se guardan solos. Tus registros anteriores no se borran.</span></div>
+    <div class="confirm">${esRecomendada() ? `<span class="note">Estás usando la rutina recomendada.</span>`
+      : resetAsk ? `<span>¿Volver a la rutina recomendada en todos los días?</span><button class="btn sec" id="ed-reset-yes" type="button">Sí, volver</button><button class="linkbtn" id="ed-reset-no" type="button">Cancelar</button>`
+      : `<button class="linkbtn" id="ed-reset" type="button" style="padding:0">Volver a la rutina recomendada</button>`}</div>
+  </div>`;
+  const save = async fn => { const ds = curDias(); ds[wd] = ds[wd] || {t: d.t, ex: []}; ds[wd].ex = ds[wd].ex.filter(x => EX[x]); fn(ds[wd]); await saveRutina(ds); };
+  box.querySelector("#ed-t").oninput = ev => { save(day => day.t = ev.target.value.trim()); renderCal(); };
+  box.querySelectorAll("[data-mv]").forEach(b => b.onclick = async () => { const i = +b.dataset.mv, j = i + +b.dataset.dir;
+    await save(day => { [day.ex[i], day.ex[j]] = [day.ex[j], day.ex[i]]; }); render(); });
+  box.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { await save(day => day.ex.splice(+b.dataset.rm, 1)); render(); });
+  box.querySelector("#ed-add").onclick = () => { catPickDay = wd; catOpen = null; catQ = ""; catMus = null; catZone = "all"; catEq = "all"; document.getElementById("cat-q").value = ""; setTab("cat"); window.scrollTo({top:0}); };
+  box.querySelector("#ed-done").onclick = () => { editDay = null; resetAsk = false; render(); };
+  const r = box.querySelector("#ed-reset"); if(r) r.onclick = () => { resetAsk = true; renderDay(); };
+  const ry = box.querySelector("#ed-reset-yes"); if(ry) ry.onclick = async () => { resetAsk = false; await saveRutina(clone(DEFAULT_PLAN)); render(); };
+  const rn = box.querySelector("#ed-reset-no"); if(rn) rn.onclick = () => { resetAsk = false; renderDay(); };
+}
+
+/* ---------- pestaña Ejercicios ---------- */
+let catQ = "", catZone = "all", catMus = null, catEq = "all", catSafe = false, catOpen = null, catPickDay = null;
+const norm = s => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function catItems(){
+  const words = norm(catQ.trim()).split(/\s+/).filter(Boolean);
+  return Object.keys(EX).filter(x => {
+    const e = EX[x], m = EXM[x] || {p:[], s:[]};
+    if(catSafe && e.risk===2) return false;
+    if(catEq!=="all" && e.eq!==catEq && !(catEq==="l" && e.eq==="p")) return false;
+    if(catMus && !m.p.some(k => GRUPOS[catMus].k.includes(k))) return false;
+    if(catZone!=="all" && !m.p.some(k => GRUPOS[grupoDe(k)]?.z===catZone)) return false;
+    if(words.length){ const hay = norm([e.n, e.m, EQN[e.eq], ...[...m.p, ...m.s].map(k => MUS[k])].join(" ")); if(!words.every(w => hay.includes(w))) return false; }
+    return true;
+  }).sort((a,b) => (daysOf(b).length>0) - (daysOf(a).length>0) || EX[b].rec - EX[a].rec || EX[a].risk - EX[b].risk || EX[a].n.localeCompare(EX[b].n, "es"));
+}
+function catCard(x){
+  const e = EX[x], m = EXM[x] || {p:[], s:[]}, ds = daysOf(x), [i0,i1] = IMG(e.img);
+  const badges = [`<span class="badge">${EQN[e.eq]}</span>`];
+  if(ds.length) badges.push(`<span class="badge mine">Tu rutina · ${ds.map(d => DIAS[d].slice(0,3)).join(", ")}</span>`);
+  else if(e.rec) badges.push(`<span class="badge mine">Recomendado</span>`);
+  if(e.risk===2) badges.push(`<span class="badge r2">Riesgo lumbar</span>`); else if(e.risk===1) badges.push(`<span class="badge r1">Cuidado lumbar</span>`);
+  const inPick = catPickDay!==null && !!PLAN[catPickDay]?.ex.includes(x);
+  const add = catPickDay!==null ? `<button class="addbtn" type="button" data-add="${x}" aria-pressed="${inPick}">${inPick ? "✓ Agregado" : "+ Agregar"}</button>` : "";
+  let body = "";
+  if(catOpen===x){
+    body = `<div class="exbody">
+      <div class="pics"><figure><img src="${i0}" alt="${esc(e.n)}: posición inicial" loading="lazy"><figcaption>Inicio</figcaption></figure>
+        <figure><img src="${i1}" alt="${esc(e.n)}: posición final" loading="lazy"><figcaption>Final</figcaption></figure></div>
+      ${musRow(x)}
+      <div class="target"><span>Series sugeridas: <span class="mono">${e.s} × ${e.r[0]}–${e.r[1]} ${e.unitR||"reps"}</span></span></div>
+      ${e.t?.length ? `<ol class="tech">${e.t.map(t => `<li>${esc(t)}</li>`).join("")}</ol>` : ""}
+      ${e.l ? `<div class="lumbar${e.risk===2?" bad":""}"><b>Lumbar:</b> ${esc(e.l)}</div>` : ""}
+      <div><div class="lbl" style="margin-bottom:6px">Hacerlo los días</div>
+        <div class="daypick">${ORDEN_DIAS.map(d => `<button type="button" data-tog="${d}" data-x="${x}" aria-pressed="${ds.includes(d)}" aria-label="${DIAS[d]}${PLAN[d]?" ("+esc(PLAN[d].t)+")":""}">${DCORTO[d]}</button>`).join("")}</div>
+        <p class="note" style="margin:6px 0 0">Toca un día para sumarlo a la rutina de ese día (se repite cada semana). Tócalo otra vez para quitarlo.</p></div>
+    </div>`;
+  }
+  return `<article class="ex" id="c-${x}"><div class="catrow"><button class="exhead" data-cx="${x}" aria-expanded="${catOpen===x}">
+      <img class="thumb" src="${i1}" alt="" loading="lazy">
+      <div style="min-width:0"><div class="exname">${esc(e.n)}</div><div class="exmeta">${esc(yList(m.p.map(k => MUS[k])))}</div><div class="badges">${badges.join("")}</div></div><span></span>
+    </button>${add}</div>${body}</article>`;
+}
+function renderCatList(){
+  const items = catItems(), list = document.getElementById("cat-list");
+  document.getElementById("cat-count").textContent = `${items.length} ejercicio${items.length===1?"":"s"}${catMus ? " para " + GRUPOS[catMus].n.toLowerCase() : ""}. Toca uno para ver fotos, técnica y en qué días hacerlo.`;
+  list.innerHTML = items.length ? items.map(catCard).join("") : `<p class="empty">No hay ejercicios con esos filtros.</p>`;
+  list.querySelectorAll("[data-cx]").forEach(b => b.onclick = () => { const x = b.dataset.cx; catOpen = catOpen===x ? null : x; renderCatList(); if(catOpen) document.getElementById("c-"+x)?.scrollIntoView({block:"nearest", behavior:"smooth"}); });
+  list.querySelectorAll("[data-add]").forEach(b => b.onclick = async () => { await toggleDay(b.dataset.add, catPickDay); renderCat(); });
+  list.querySelectorAll("[data-tog]").forEach(b => b.onclick = async () => { await toggleDay(b.dataset.x, +b.dataset.tog); renderCatList(); });
+}
+function renderCat(){
+  const pb = document.getElementById("pickbar");
+  if(catPickDay!==null){
+    const n = PLAN[catPickDay]?.ex.length || 0;
+    pb.innerHTML = `<div class="pickbar"><b>Agregando al ${DIAS[catPickDay]} · ${n} ejercicio${n===1?"":"s"}</b><button class="btn" type="button" id="pick-done">Listo</button></div>`;
+    document.getElementById("pick-done").onclick = () => { editDay = catPickDay; catPickDay = null; setTab("train"); };
+  } else pb.innerHTML = "";
+  document.querySelectorAll("[data-zone]").forEach(b => { b.setAttribute("aria-pressed", b.dataset.zone===catZone);
+    b.onclick = () => { catZone = b.dataset.zone; if(catMus && catZone!=="all" && GRUPOS[catMus].z!==catZone) catMus = null; renderCat(); }; });
+  const gs = Object.keys(GRUPOS).filter(g => catZone==="all" || GRUPOS[g].z===catZone);
+  const mus = document.getElementById("cat-mus");
+  mus.innerHTML = `<button type="button" data-g="" aria-pressed="${!catMus}">Todos</button>` + gs.map(g => `<button type="button" data-g="${g}" aria-pressed="${catMus===g}">${GRUPOS[g].n}</button>`).join("");
+  mus.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { catMus = b.dataset.g || null; renderCat(); });
+  const eqs = document.getElementById("cat-eq");
+  eqs.innerHTML = [["all","Todo equipo"],["m","Máquina"],["c","Polea"],["s","Smith"],["l","Peso libre"]].map(([k,n]) => `<button type="button" data-eq="${k}" aria-pressed="${catEq===k}">${n}</button>`).join("");
+  eqs.querySelectorAll("[data-eq]").forEach(b => b.onclick = () => { catEq = b.dataset.eq; renderCat(); });
+  document.getElementById("cat-safe").checked = catSafe;
+  renderCatList();
+}
+document.getElementById("cat-q").oninput = ev => { catQ = ev.target.value; renderCatList(); };
+document.getElementById("cat-safe").onchange = ev => { catSafe = ev.target.checked; renderCatList(); };
+applyRutina();
 
 /* ---------- copia de seguridad ---------- */
 const bk = document.getElementById("bk-st");
@@ -857,14 +1098,15 @@ document.getElementById("dl-csv").onclick = () => {
   });
   offer(`rutina-alex-${stamp()}.csv`, "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n"));
 };
-document.getElementById("dl-json").onclick = () => offer(`rutina-alex-${stamp()}.json`, JSON.stringify({version:1, exportado:new Date().toISOString(), logs:{...logs, ...weights, ...meds}}, null, 1));
+document.getElementById("dl-json").onclick = () => offer(`rutina-alex-${stamp()}.json`, JSON.stringify({version:1, exportado:new Date().toISOString(), logs:{...logs, ...weights, ...meds, ...(rutina?{rutina}:{})}}, null, 1));
 document.getElementById("restore").onchange = async ev => {
   const f = ev.target.files?.[0]; if(!f) return;
   try{
     const j = JSON.parse(await f.text()); const add = j.logs || {};
     let n = 0;
     for(const [k,v] of Object.entries(add)){
-      if(v && v.ex && v.date && Array.isArray(v.sets) && !logs[k]){ await saveLog(k, v); n++; }
+      if(k==="rutina" && v && v.tipo==="rutina" && v.dias){ if(!rutina || (v.ts||0) > (rutina.ts||0)){ await saveRutina(v.dias, v.ts); n++; } }
+      else if(v && v.ex && v.date && Array.isArray(v.sets) && !logs[k]){ await saveLog(k, v); n++; }
       else if(v && typeof v.peso==="number" && v.date && !weights[k]){ weights[k] = v; lsSave(); if(col){ try{ await col.doc(k).set(v) }catch(e){} } n++; }
       else if(v && v.tipo==="medidas" && v.date && !meds[k]){ meds[k] = v; lsSave(); if(col){ try{ await col.doc(k).set(v) }catch(e){} } n++; }
     }
@@ -943,12 +1185,12 @@ async function findOrCreateFile() {
     { method: "POST", headers: { "Content-Type": "multipart/related; boundary=" + boundary }, body });
   const cj = await c.json(); gFileId = cj.id; gFileLink = cj.webViewLink || ""; saveSyncState();
 }
-function allDocs() { return { ...logs, ...weights, ...meds }; }
+function allDocs() { return { ...logs, ...weights, ...meds, ...(rutina ? { rutina } : {}) }; }
 function route(map) {
-  const L = {}, W = {}, M = {};
+  const L = {}, W = {}, M = {}; let R = null;
   Object.entries(map).forEach(([k, v]) => { if (deletedIds[k]) return;
-    if (v && v.ex) L[k] = v; else if (v && typeof v.peso === "number") W[k] = v; else if (v && v.tipo === "medidas") M[k] = v; });
-  logs = L; weights = W; meds = M; lsSave();
+    if (v && v.tipo === "rutina") R = v; else if (v && v.ex) L[k] = v; else if (v && typeof v.peso === "number") W[k] = v; else if (v && v.tipo === "medidas") M[k] = v; });
+  logs = L; weights = W; meds = M; if (R) rutina = R; lsSave(); applyRutina();
 }
 async function pullAndMerge() {
   const r = await api(`https://www.googleapis.com/drive/v3/files/${gFileId}?alt=media`);
@@ -1001,7 +1243,7 @@ if (gToken) connect(false);
 else setSync(gEmailHint ? "expired" : "off", gEmailHint ? "Toca para conectar y sincronizar." : "Conecta tu cuenta de Google para guardar en tu Drive.");
 window.addEventListener("online", () => { if (dirty && gToken) schedulePush(); });
 
-function render(){ if(tab==="prog") renderProg(); else if(tab==="mus") renderMus(); else { renderCal(); renderDay(); } }
+function render(){ if(tab==="prog") renderProg(); else if(tab==="mus") renderMus(); else if(tab==="cat") renderCat(); else { renderCal(); renderDay(); } }
 render();
 </script>
 
