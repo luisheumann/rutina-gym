@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rutina Gym</title>
+<meta name="theme-color" content="#111613">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  html, body { margin: 0; height: 100%; background: #111613; overflow: hidden; }
+  #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+  #wait { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+          color: #97a59c; font: 15px system-ui, sans-serif; text-align: center; padding: 24px; }
+  #wait img { width: 72px; height: 72px; }
+  #wait a { color: #4cc489; }
+</style>
+</head>
+<body>
+  <div id="wait">
+    <img src="icon-192.png" alt="">
+    <div>Cargando tu rutina…</div>
+    <div id="help" hidden>¿No carga? <a href="https://script.google.com/macros/s/AKfycbxNy_k7Wc0COGUoxNf3aT295xHYbZI-DKbITlM3w9Y79VH-lm-a9V8zT7AGa62WVvjVEA/exec" target="_top">Ábrela aquí</a> e inicia sesión con tu cuenta de Google.</div>
+  </div>
+  <iframe id="app" title="Rutina Gym" src="https://script.google.com/macros/s/AKfycbxNy_k7Wc0COGUoxNf3aT295xHYbZI-DKbITlM3w9Y79VH-lm-a9V8zT7AGa62WVvjVEA/exec"></iframe>
+  <script>
+    // Si en 12 s no ha cargado, muestra el enlace directo (por ejemplo, si falta iniciar sesión).
+    const app = document.getElementById('app');
+    let loaded = false;
+    app.addEventListener('load', () => { loaded = true; });
+    app.style.visibility = 'hidden';
+    app.addEventListener('load', () => { app.style.visibility = 'visible'; });
+    setTimeout(() => { if (!loaded) { document.getElementById('help').hidden = false; } }, 12000);
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  </script>
+</body>
+</html>
