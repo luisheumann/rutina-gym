@@ -228,6 +228,21 @@ details.reg[open] summary{margin-bottom:8px}
 .cover.warn{background:var(--warn-soft)}
 .cover.warn b{color:var(--warn)}
 .confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13.5px}
+.sw{position:relative;overflow:hidden;border-radius:10px}
+.swbg{position:absolute;inset:0;display:flex;align-items:center;padding:0 18px;font-weight:700;font-size:14px;color:#fff;background:var(--accent)}
+.sw[data-dir="left"] .swbg{background:var(--bad);justify-content:flex-end}
+.sw[data-dir="right"] .swbg{justify-content:flex-start}
+.sw .swbg span{display:none}
+.sw[data-dir="left"] .swbg .l,.sw[data-dir="right"] .swbg .r{display:inline}
+.swfg{position:relative;background:var(--card);touch-action:pan-y;transition:transform .2s ease;user-select:none;-webkit-user-select:none}
+.edrow.swfg{border-radius:10px}
+.inday{margin-right:12px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:14px}
+.pickbar small{display:block;font-weight:500;opacity:.85;font-size:12px}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.dlg{background:var(--card);color:var(--ink);border-radius:14px;padding:18px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;font-size:15.5px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.dlg p{margin:0}
+.dlg .actions{justify-content:flex-end}
+.btn.danger{background:var(--bad);color:#fff}
 .sync{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--muted)}
 .sync .sync-txt{flex:1;min-width:0}
 .sync .btn{padding:8px 12px}
@@ -966,11 +981,48 @@ async function saveRutina(dias, ts){
 }
 const daysOf = x => ORDEN_DIAS.filter(d => PLAN[d]?.ex.includes(x));
 const titleFor = x => { const g = grupoDe(EXM[x]?.p[0]); return g ? GRUPOS[g].n : "Entrenamiento"; };
-async function toggleDay(x, wd){
+async function confirmToggle(x, wd, add){
+  const e = EX[x], dia = DIAS[wd];
+  const msg = add ? `¿Agregar <b>${esc(e.n)}</b> a los ${dia}?${e.risk===2?`<br><span class="note" style="color:var(--bad)">Ojo: tiene riesgo para la lumbar.</span>`:""}`
+                  : `¿Quitar <b>${esc(e.n)}</b> de los ${dia}?<br><span class="note">Tus registros anteriores no se borran.</span>`;
+  if(!await askConfirm(msg, add ? "Sí, agregar" : "Sí, quitar", !add)) return false;
   const dias = curDias(); const d = dias[wd] || (dias[wd] = {t: titleFor(x), ex: []});
   if(!d.t) d.t = titleFor(x);
-  const i = d.ex.indexOf(x); if(i >= 0) d.ex.splice(i,1); else d.ex.push(x);
-  await saveRutina(dias);
+  if(add){ if(!d.ex.includes(x)) d.ex.push(x); } else d.ex = d.ex.filter(y => y!==x);
+  await saveRutina(dias); render(); return true;
+}
+function askConfirm(msg, okTxt, danger){
+  return new Promise(res => {
+    const m = document.createElement("div"); m.className = "modal";
+    m.innerHTML = `<div class="dlg" role="dialog" aria-modal="true"><p>${msg}</p><div class="actions"><button class="btn sec" type="button" data-no>Cancelar</button><button class="btn ${danger?"danger":"pri"}" type="button" data-ok>${okTxt}</button></div></div>`;
+    const close = v => { m.remove(); document.removeEventListener("keydown", key); res(v); };
+    const key = e => { if(e.key==="Escape") close(false); };
+    m.querySelector("[data-ok]").onclick = () => close(true);
+    m.querySelector("[data-no]").onclick = () => close(false);
+    m.onclick = e => { if(e.target===m) close(false); };
+    document.addEventListener("keydown", key);
+    document.body.appendChild(m); m.querySelector("[data-ok]").focus();
+  });
+}
+let swiped = false;
+function swipeable(fg, acts){
+  const wrap = fg.parentElement; let x0 = 0, y0 = 0, dx = 0, on = false, lock = null;
+  fg.addEventListener("pointerdown", e => { if(e.button>0 || e.target.closest(".icons")) return; x0 = e.clientX; y0 = e.clientY; dx = 0; on = true; lock = null; fg.style.transition = "none"; });
+  fg.addEventListener("pointermove", e => {
+    if(!on) return; const mx = e.clientX - x0, my = e.clientY - y0;
+    if(lock===null && (Math.abs(mx) > 8 || Math.abs(my) > 8)){ lock = Math.abs(mx) > Math.abs(my) ? "x" : "y"; if(lock==="x") try{ fg.setPointerCapture(e.pointerId) }catch(_){} }
+    if(lock!=="x") return;
+    dx = mx; if((dx > 0 && !acts.onRight) || (dx < 0 && !acts.onLeft)) dx = dx / 6;
+    wrap.dataset.dir = dx > 0 ? "right" : "left"; fg.style.transform = `translateX(${dx}px)`;
+  });
+  const end = () => {
+    if(!on) return; on = false; fg.style.transition = ""; fg.style.transform = "";
+    if(lock!=="x") return;
+    swiped = true; setTimeout(() => swiped = false, 80);
+    const hit = Math.abs(dx) > Math.min(110, fg.offsetWidth * 0.3);
+    if(hit && dx < 0 && acts.onLeft) acts.onLeft(); else if(hit && dx > 0 && acts.onRight) acts.onRight();
+  };
+  fg.addEventListener("pointerup", end); fg.addEventListener("pointercancel", end);
 }
 function coverHtml(){
   const v = volume("plan"), sin = Object.keys(MUS).filter(k => k!=="lumbar" && v[k]===0);
@@ -980,13 +1032,13 @@ function coverHtml(){
 let editDay = null, resetAsk = false;
 function renderEditor(box, wd, fecha){
   const dias = curDias(), d = dias[wd] || {t:"", ex:[]}, exs = d.ex.filter(x => EX[x]);
-  const rows = exs.map((x,i) => `<div class="edrow"><img src="${IMG(EX[x].img)[1]}" alt="" loading="lazy">
+  const rows = exs.map((x,i) => `<div class="sw"><div class="swbg"><span class="l">Quitar</span></div><div class="edrow swfg" data-x="${x}"><img src="${IMG(EX[x].img)[1]}" alt="" loading="lazy">
     <div style="min-width:0"><div class="nm">${esc(EX[x].n)}</div><div class="exmeta">${esc(EX[x].m)} · ${EX[x].s} × ${EX[x].r[0]}–${EX[x].r[1]}${EX[x].risk===2?` · <b style="color:var(--bad)">riesgo lumbar</b>`:""}</div></div>
-    <div class="icons"><button type="button" data-mv="${i}" data-dir="-1" aria-label="Subir" ${i?"":"disabled"}>↑</button><button type="button" data-mv="${i}" data-dir="1" aria-label="Bajar" ${i<exs.length-1?"":"disabled"}>↓</button><button type="button" class="x" data-rm="${i}" aria-label="Quitar ${esc(EX[x].n)}">✕</button></div></div>`).join("");
+    <div class="icons"><button type="button" data-mv="${i}" data-dir="-1" aria-label="Subir" ${i?"":"disabled"}>↑</button><button type="button" data-mv="${i}" data-dir="1" aria-label="Bajar" ${i<exs.length-1?"":"disabled"}>↓</button></div></div></div>`).join("");
   box.innerHTML = `<div class="editor">
     <div class="dayhead"><h2>Editar ${DIAS[wd]}</h2><span class="sub">Se repite todos los ${DIAS[wd]}</span></div>
     <label for="ed-t">Nombre del día<input id="ed-t" value="${esc(d.t)}" placeholder="Ej.: Pierna" maxlength="30" autocomplete="off"></label>
-    ${rows || `<p class="rest" style="margin:0">Sin ejercicios: este día queda de descanso.</p>`}
+    ${rows ? `<p class="note" style="margin:0">Desliza un ejercicio hacia la izquierda ← para quitarlo.</p>${rows}` : `<p class="rest" style="margin:0">Sin ejercicios: este día queda de descanso.</p>`}
     <button class="btn sec" type="button" id="ed-add">+ Agregar ejercicios</button>
     ${coverHtml()}
     <div class="actions"><button class="btn pri" type="button" id="ed-done">Listo</button><span class="status">Los cambios se guardan solos. Tus registros anteriores no se borran.</span></div>
@@ -998,7 +1050,7 @@ function renderEditor(box, wd, fecha){
   box.querySelector("#ed-t").oninput = ev => { save(day => day.t = ev.target.value.trim()); renderCal(); };
   box.querySelectorAll("[data-mv]").forEach(b => b.onclick = async () => { const i = +b.dataset.mv, j = i + +b.dataset.dir;
     await save(day => { [day.ex[i], day.ex[j]] = [day.ex[j], day.ex[i]]; }); render(); });
-  box.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { await save(day => day.ex.splice(+b.dataset.rm, 1)); render(); });
+  box.querySelectorAll(".edrow.swfg").forEach(fg => swipeable(fg, {onLeft: () => confirmToggle(fg.dataset.x, wd, false)}));
   box.querySelector("#ed-add").onclick = () => { catPickDay = wd; catOpen = null; catQ = ""; catMus = null; catZone = "all"; catEq = "all"; document.getElementById("cat-q").value = ""; setTab("cat"); window.scrollTo({top:0}); };
   box.querySelector("#ed-done").onclick = () => { editDay = null; resetAsk = false; render(); };
   const r = box.querySelector("#ed-reset"); if(r) r.onclick = () => { resetAsk = true; renderDay(); };
@@ -1028,7 +1080,7 @@ function catCard(x){
   else if(e.rec) badges.push(`<span class="badge mine">Recomendado</span>`);
   if(e.risk===2) badges.push(`<span class="badge r2">Riesgo lumbar</span>`); else if(e.risk===1) badges.push(`<span class="badge r1">Cuidado lumbar</span>`);
   const inPick = catPickDay!==null && !!PLAN[catPickDay]?.ex.includes(x);
-  const add = catPickDay!==null ? `<button class="addbtn" type="button" data-add="${x}" aria-pressed="${inPick}">${inPick ? "✓ Agregado" : "+ Agregar"}</button>` : "";
+  const add = inPick ? `<span class="inday" title="Ya está en este día">✓</span>` : "";
   let body = "";
   if(catOpen===x){
     body = `<div class="exbody">
@@ -1040,27 +1092,29 @@ function catCard(x){
       ${e.l ? `<div class="lumbar${e.risk===2?" bad":""}"><b>Lumbar:</b> ${esc(e.l)}</div>` : ""}
       <div><div class="lbl" style="margin-bottom:6px">Hacerlo los días</div>
         <div class="daypick">${ORDEN_DIAS.map(d => `<button type="button" data-tog="${d}" data-x="${x}" aria-pressed="${ds.includes(d)}" aria-label="${DIAS[d]}${PLAN[d]?" ("+esc(PLAN[d].t)+")":""}">${DCORTO[d]}</button>`).join("")}</div>
-        <p class="note" style="margin:6px 0 0">Toca un día para sumarlo a la rutina de ese día (se repite cada semana). Tócalo otra vez para quitarlo.</p></div>
+        <p class="note" style="margin:6px 0 0">Toca un día para agregarlo o quitarlo de esa rutina (se repite cada semana). Te pedirá confirmación.</p></div>
     </div>`;
   }
-  return `<article class="ex" id="c-${x}"><div class="catrow"><button class="exhead" data-cx="${x}" aria-expanded="${catOpen===x}">
+  const pick = catPickDay!==null;
+  return `<article class="ex" id="c-${x}">${pick?`<div class="sw"><div class="swbg"><span class="r">+ Agregar</span><span class="l">Quitar</span></div>`:""}<div class="catrow${pick?" swfg":""}" data-x="${x}"><button class="exhead" data-cx="${x}" aria-expanded="${catOpen===x}">
       <img class="thumb" src="${i1}" alt="" loading="lazy">
       <div style="min-width:0"><div class="exname">${esc(e.n)}</div><div class="exmeta">${esc(yList(m.p.map(k => MUS[k])))}</div><div class="badges">${badges.join("")}</div></div><span></span>
-    </button>${add}</div>${body}</article>`;
+    </button>${add}</div>${pick?"</div>":""}${body}</article>`;
 }
 function renderCatList(){
   const items = catItems(), list = document.getElementById("cat-list");
   document.getElementById("cat-count").textContent = `${items.length} ejercicio${items.length===1?"":"s"}${catMus ? " para " + GRUPOS[catMus].n.toLowerCase() : ""}. Toca uno para ver fotos, técnica y en qué días hacerlo.`;
   list.innerHTML = items.length ? items.map(catCard).join("") : `<p class="empty">No hay ejercicios con esos filtros.</p>`;
-  list.querySelectorAll("[data-cx]").forEach(b => b.onclick = () => { const x = b.dataset.cx; catOpen = catOpen===x ? null : x; renderCatList(); if(catOpen) document.getElementById("c-"+x)?.scrollIntoView({block:"nearest", behavior:"smooth"}); });
-  list.querySelectorAll("[data-add]").forEach(b => b.onclick = async () => { await toggleDay(b.dataset.add, catPickDay); renderCat(); });
-  list.querySelectorAll("[data-tog]").forEach(b => b.onclick = async () => { await toggleDay(b.dataset.x, +b.dataset.tog); renderCatList(); });
+  list.querySelectorAll("[data-cx]").forEach(b => b.onclick = () => { if(swiped) return; const x = b.dataset.cx; catOpen = catOpen===x ? null : x; renderCatList(); if(catOpen) document.getElementById("c-"+x)?.scrollIntoView({block:"nearest", behavior:"smooth"}); });
+  if(catPickDay!==null) list.querySelectorAll(".catrow.swfg").forEach(fg => { const x = fg.dataset.x, wd = catPickDay;
+    swipeable(fg, PLAN[wd]?.ex.includes(x) ? {onLeft: () => confirmToggle(x, wd, false)} : {onRight: () => confirmToggle(x, wd, true)}); });
+  list.querySelectorAll("[data-tog]").forEach(b => b.onclick = () => { const d = +b.dataset.tog, x = b.dataset.x; confirmToggle(x, d, !PLAN[d]?.ex.includes(x)); });
 }
 function renderCat(){
   const pb = document.getElementById("pickbar");
   if(catPickDay!==null){
     const n = PLAN[catPickDay]?.ex.length || 0;
-    pb.innerHTML = `<div class="pickbar"><b>Agregando al ${DIAS[catPickDay]} · ${n} ejercicio${n===1?"":"s"}</b><button class="btn" type="button" id="pick-done">Listo</button></div>`;
+    pb.innerHTML = `<div class="pickbar"><b>Agregando al ${DIAS[catPickDay]} · ${n} ejercicio${n===1?"":"s"}<small>Desliza → para agregar · ← para quitar</small></b><button class="btn" type="button" id="pick-done">Listo</button></div>`;
     document.getElementById("pick-done").onclick = () => { editDay = catPickDay; catPickDay = null; setTab("train"); };
   } else pb.innerHTML = "";
   document.querySelectorAll("[data-zone]").forEach(b => { b.setAttribute("aria-pressed", b.dataset.zone===catZone);
