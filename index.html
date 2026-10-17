@@ -250,6 +250,7 @@ details.reg[open] summary{margin-bottom:8px}
 .sync[data-state="on"] .sync-dot{background:var(--accent)}
 .sync[data-state="busy"] .sync-dot{background:var(--warn)}
 .sync[data-state="expired"] .sync-dot,.sync[data-state="error"] .sync-dot{background:var(--warn)}
+.sync[data-state="offline"] .sync-dot{background:var(--hold)}
 </style>
 </head>
 <body>
@@ -1263,11 +1264,16 @@ async function pushNow() {
     { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: 1, actualizado: new Date().toISOString(), logs: allDocs() }) });
   dirty = false; saveSyncState();
 }
+function offlineMsg() {
+  setSync("offline", dirty ? "Sin internet. Tus cambios están guardados en el teléfono y se subirán a tu Drive al volver la conexión."
+                           : "Sin internet. Puedes registrar normal: se guarda en el teléfono y se sube al volver la conexión.");
+}
 function schedulePush() {
   dirty = true; saveSyncState();
   clearTimeout(pushTimer);
   pushTimer = setTimeout(async () => {
-    if (!gToken || Date.now() > gTokenExp - 30000) { setSync(gEmailHint ? "expired" : "off", "Guardado en el teléfono. Conéctate para subirlo a tu Drive."); return; }
+    if (!navigator.onLine) { offlineMsg(); return; }
+    if (!gToken || Date.now() > gTokenExp - 30000) { setSync(gEmailHint ? "expired" : "off", "Guardado en el teléfono. Toca para subirlo a tu Drive."); return; }
     try { setSync("busy", "Guardando en tu Drive…"); await pushNow(); setSync("on", "Guardado en tu Google Drive"); }
     catch (e) { setSync(e.auth ? "expired" : "error", e.auth ? "Sesión vencida. Lo guardado sigue en el teléfono." : "Sin conexión. Lo guardado sigue en el teléfono."); }
   }, 700);
@@ -1278,7 +1284,9 @@ col = { doc: (id) => ({
   delete: async () => { deletedIds[id] = Date.now(); schedulePush(); return true; }
 }) };
 async function connect(interactive) {
-  if (syncing) return; syncing = true;
+  if (syncing) return;
+  if (!navigator.onLine) { offlineMsg(); return; }
+  syncing = true;
   try {
     if (!gToken || Date.now() > gTokenExp - 60000) { setSync("busy", "Conectando con Google…"); await requestToken(interactive); }
     setSync("busy", "Sincronizando con tu Drive…");
@@ -1288,14 +1296,31 @@ async function connect(interactive) {
     storeNote.innerHTML = `Tus registros se guardan en tu Google Drive, en el archivo <b>${FILE_NAME}</b>.`;
     render();
   } catch (e) {
+    if (!navigator.onLine) { offlineMsg(); return; }
     if (e.auth) { gToken = null; saveSyncState(); }
     setSync(gEmailHint ? "expired" : "off", gEmailHint ? "Toca para conectar y sincronizar." : "Conecta tu cuenta de Google para guardar en tu Drive.");
   } finally { syncing = false; }
 }
 storeNote.textContent = "Mientras no conectes Google Drive, lo que registres queda guardado solo en este teléfono.";
-if (gToken) connect(false);
+const tokenOk = () => gToken && Date.now() < gTokenExp - 60000;
+if (!navigator.onLine) offlineMsg();
+else if (gToken) connect(false);
 else setSync(gEmailHint ? "expired" : "off", gEmailHint ? "Toca para conectar y sincronizar." : "Conecta tu cuenta de Google para guardar en tu Drive.");
-window.addEventListener("online", () => { if (dirty && gToken) schedulePush(); });
+// al volver internet: sincroniza solo si la sesión sigue activa; si venció, pide un toque
+window.addEventListener("online", () => {
+  if (tokenOk()) connect(false);
+  else if (gEmailHint) setSync("expired", dirty ? "Volvió el internet. Toca para subir tus cambios a tu Drive." : "Volvió el internet. Toca para sincronizar.");
+  else setSync("off", "Conecta tu cuenta de Google para guardar en tu Drive.");
+});
+window.addEventListener("offline", offlineMsg);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && navigator.onLine && dirty && tokenOk()) connect(false); });
+// guarda en el teléfono las fotos de los ejercicios de tu rutina para verlas sin internet
+function cacheRoutineImages() {
+  if (!("caches" in window) || !navigator.onLine) return;
+  const urls = [...new Set(Object.values(PLAN).flatMap(d => d.ex).flatMap(x => EX[x] ? IMG(EX[x].img) : []))];
+  caches.open("rg-img-v1").then(c => urls.forEach(u => c.match(u).then(m => m || c.add(u).catch(() => {})))).catch(() => {});
+}
+setTimeout(cacheRoutineImages, 3000);
 
 function render(){ if(tab==="prog") renderProg(); else if(tab==="mus") renderMus(); else if(tab==="cat") renderCat(); else { renderCal(); renderDay(); } }
 render();
