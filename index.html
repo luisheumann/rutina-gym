@@ -68,6 +68,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .pill{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap;font-family:var(--body)}
 .pill.up{background:var(--accent-soft);color:var(--up)}
 .pill.hold{background:var(--hold-soft);color:var(--hold)}
+.pill.down{background:var(--warn-soft);color:var(--warn)}
 .pill.new{background:transparent;border:1px solid var(--line);color:var(--muted)}
 .pill.done{background:var(--accent);color:var(--accent-ink)}
 .exbody{padding:0 12px 14px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line);padding-top:12px}
@@ -538,7 +539,7 @@ function history(exId, beforeDate){
   return Object.values(logs).filter(l => l.ex===exId && (!beforeDate || l.date < beforeDate))
     .sort((a,b)=> a.date<b.date?1:-1);
 }
-const fmt = n => (Math.round(n*10)/10).toString().replace(".",",");
+const fmt = n => (Math.round(n*100)/100).toString().replace(".",",");
 function advice(exId, dateStr){
   const e = EX[exId], prev = history(exId, dateStr)[0];
   if(!prev) return {cls:"new", txt:"Primera vez", kg:null};
@@ -549,6 +550,14 @@ function advice(exId, dateStr){
     return allTop ? {cls:"up",txt:"Sube dificultad",kg} : {cls:"hold",txt:"Busca más reps",kg};
   }
   const minKg = Math.min(...sets.map(s => s.kg||0));
+  // con el peso más alto no se completó el mínimo del rango: recomendar uno con el que sí se termina la serie
+  const short = sets.filter(s => (s.kg||0)===kg && s.reps < e.r[0]);
+  if(short.length){
+    const ok = [...new Set(sets.map(s => s.kg||0))].filter(k => k < kg && sets.filter(s => (s.kg||0)===k).every(s => s.reps >= e.r[0]));
+    const to = ok.length ? Math.max(...ok) : Math.max(0, Math.round((kg - e.inc)*100)/100);
+    return {cls:"down", txt:`Baja a ${fmt(to)} kg`, kg:to,
+      why:`Con ${fmt(kg)} kg hiciste ${short.map(s => s.reps).join(" y ")} repeticiones, menos de ${e.r[0]}. Usa ${fmt(to)} kg en todas las series para completarlas.`};
+  }
   if(allTop && minKg < kg) return {cls:"hold", txt:`Todas a ${fmt(kg)} kg`, kg};
   if(allTop) return {cls:"up", txt:`Sube a ${fmt(kg+e.inc)} kg`, kg:kg+e.inc};
   return {cls:"hold", txt:`Mantén ${fmt(kg)} kg`, kg};
@@ -630,6 +639,7 @@ function card(x, key){
         <figure><img src="${i1}" alt="${esc(e.n)}: posición final" loading="lazy"><figcaption>Final</figcaption></figure></div>
       ${musRow(x)}
       <div class="target"><span>Objetivo: <span class="mono">${repsTxt}</span></span>${prev?`<span>Última vez: <span class="mono">${prev.sets.map(s=>(s.kg?fmt(s.kg)+"×":"")+s.reps).join(" · ")}</span></span>`:""}</div>
+      ${a.why && !mine?`<div class="lumbar" style="margin-top:-4px"><b>Peso:</b> ${esc(a.why)}</div>`:""}
       <ol class="tech">${e.t.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>
       ${e.l?`<div class="lumbar${e.risk===2?" bad":""}"><b>Lumbar:</b> ${esc(e.l)}</div>`:""}
       <form class="sets" data-ex="${x}" data-doc="${docId}" data-date="${key}">
