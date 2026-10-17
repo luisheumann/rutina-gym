@@ -3,34 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#111613">
+<meta name="theme-color" content="#0A0A0A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Rutina Gym</title>
+<title>Rock and Rolls · Mi rutina</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;font-size:14px}
 img{max-width:100%}
-/* Planilla de gimnasio: calendario arriba, rutina del día debajo como tarjetas que se abren. Acento = verde del disco de 10 kg. */
+/* Rock and Rolls: negro, naranja del logo y letras condensadas en mayúsculas. */
 :root{
-  --bg:#eef1ee; --card:#ffffff; --ink:#1a211d; --muted:#5d6a62; --line:#d6ddd8;
-  --accent:#1f7a4d; --accent-ink:#ffffff; --accent-soft:#dcefe4;
-  --warn:#9a5b00; --warn-soft:#fbefd9; --up:#1f7a4d; --hold:#4a5a8a; --hold-soft:#e3e7f4;
+  --bg:#0A0A0A; --card:#161616; --ink:#FFFFFF; --muted:#A3A3A3; --line:#262626;
+  --accent:#F07726; --accent-ink:#0A0A0A; --accent-soft:#2A1A0E;
+  --warn:#FFB020; --warn-soft:#2E2410; --up:#F07726; --hold:#C9C9C9; --hold-soft:#242424;
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#111613; --card:#1a201c; --ink:#e7ece8; --muted:#97a59c; --line:#2c3530;
-  --accent:#4cc489; --accent-ink:#0c1a12; --accent-soft:#1d3528;
-  --warn:#f0b45a; --warn-soft:#33281a; --up:#4cc489; --hold:#a9b6e6; --hold-soft:#232a40; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#111613; --card:#1a201c; --ink:#e7ece8; --muted:#97a59c; --line:#2c3530;
-  --accent:#4cc489; --accent-ink:#0c1a12; --accent-soft:#1d3528;
-  --warn:#f0b45a; --warn-soft:#33281a; --up:#4cc489; --hold:#a9b6e6; --hold-soft:#232a40; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;
@@ -138,15 +131,13 @@ select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:
 .filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .tabs{grid-template-columns:repeat(3,1fr)}
 /* mapa muscular */
-:root{--body:#d5ddd8;--mus-0:#c2ccc6;--mus-sec:#9fd2b5}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--body:#26302b;--mus-0:#35413a;--mus-sec:#2f6b4c}}
-:root[data-theme="dark"]{--body:#26302b;--mus-0:#35413a;--mus-sec:#2f6b4c}
+:root{--sil:#2A2A2A;--mus-0:#3A3A3A;--mus-sec:#8A4A1E}
 .bodies{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:360px;margin:0 auto;width:100%}
 .bodies figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:2px}
 .bodies figcaption{font-size:11px;color:var(--muted);font-family:var(--display);letter-spacing:.06em;text-transform:uppercase}
 .bodies svg{width:100%;height:auto;display:block}
 .bodies.mini{max-width:190px;margin:0}
-.bodies .sil{fill:var(--body)}
+.bodies .sil{fill:var(--sil)}
 .bodies .m{fill:var(--mus-0);stroke:var(--card);stroke-width:.6;transition:fill .2s}
 .bodies .m.sec{fill:var(--mus-sec)}
 .bodies .m.pri{fill:var(--accent)}
@@ -184,9 +175,7 @@ select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:
 details.reg summary{cursor:pointer;font-weight:600;color:var(--accent);padding:4px 0}
 details.reg[open] summary{margin-bottom:8px}
 /* catálogo y editor */
-:root{--bad:#b3261e;--bad-soft:#fbe4e2}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bad:#ff8a80;--bad-soft:#3a1d1b}}
-:root[data-theme="dark"]{--bad:#ff8a80;--bad-soft:#3a1d1b}
+:root{--bad:#FF8A80;--bad-soft:#3A1A17}
 .tabs{grid-template-columns:repeat(4,1fr)}
 .tabs button{font-size:13.5px;padding:8px 0;letter-spacing:0}
 .lumbar.bad{background:var(--bad-soft)}
@@ -243,6 +232,29 @@ details.reg[open] summary{margin-bottom:8px}
 .dlg p{margin:0}
 .dlg .actions{justify-content:flex-end}
 .btn.danger{background:var(--bad);color:#fff}
+/* ---------- estilo Rock and Rolls ---------- */
+h1,h2,h3,.exname{text-transform:uppercase}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:78px;height:auto;flex:none}
+.brand h1{font-size:34px;font-weight:900;line-height:.92}
+.brand h1 span{color:var(--accent)}
+.brand .lbl{color:var(--accent);letter-spacing:.12em;font-size:12px}
+.dayhead h2{font-size:32px;font-weight:900;line-height:.95}
+.exname{font-weight:800;font-size:18px}
+.btn{border-radius:12px}
+.btn.pri{font-family:var(--display);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:17px}
+.cal,.ex,.panel,.edrow{border-radius:16px}
+.day.sel{background:var(--accent)}
+.chip{background:var(--hold-soft);color:var(--ink)}
+.pill.new{border-color:#3A3A3A}
+/* menú inferior fijo */
+body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.tabs{position:fixed;z-index:20;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:620px;margin:0 auto;
+  background:var(--card);border:1px solid var(--line);border-radius:20px;padding:6px;gap:4px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.tabs button{display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:14px;padding:7px 0;font-family:var(--body);text-transform:none;font-size:11.5px;font-weight:600;letter-spacing:0}
+.tabs button svg{width:22px;height:22px}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.pickbar{top:6px}
 .sync{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--muted)}
 .sync .sync-txt{flex:1;min-width:0}
 .sync .btn{padding:8px 12px}
@@ -256,17 +268,20 @@ details.reg[open] summary{margin-bottom:8px}
 <body>
 
 <div class="wrap">
-  <header>
-    <div class="lbl">Ganar masa · cuidando la lumbar</div>
-    <h1>Mi rutina</h1>
+  <header class="brand">
+    <img src="logo.png" alt="Rock and Rolls">
+    <div>
+      <div class="lbl">Entrenar nunca sonó tan bien</div>
+      <h1>Mi <span>rutina</span></h1>
+    </div>
   </header>
   <div id="sync" class="sync" data-state="off" aria-live="polite"></div>
 
   <nav class="tabs" aria-label="Vista">
-    <button id="tab-train" aria-pressed="true">Entrenar</button>
-    <button id="tab-mus" aria-pressed="false">Músculos</button>
-    <button id="tab-cat" aria-pressed="false">Ejercicios</button>
-    <button id="tab-prog" aria-pressed="false">Progreso</button>
+    <button id="tab-train" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>Entrenar</button>
+    <button id="tab-mus" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 9l5 1 5-1M9 21l3-7 3 7"/></svg>Músculos</button>
+    <button id="tab-cat" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>Ejercicios</button>
+    <button id="tab-prog" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 19h16M7 16v-4M12 16V8M17 16v-7"/></svg>Progreso</button>
   </nav>
 
   <section id="v-cat" class="wrap" style="gap:12px" hidden>
@@ -373,7 +388,7 @@ details.reg[open] summary{margin-bottom:8px}
   </div>
 
   <section class="foot">
-    <p><b>Cómo progresar:</b> trabaja cada serie a 1–2 repeticiones del fallo. Cuando completes todas las series en el tope del rango con buena técnica, la próxima vez sube el peso (la etiqueta verde te lo indica). Si algo molesta en la zona lumbar, para ese ejercicio y consúltalo con tu médico o fisioterapeuta.</p>
+    <p><b>Cómo progresar:</b> trabaja cada serie a 1–2 repeticiones del fallo. Cuando completes todas las series en el tope del rango con buena técnica, la próxima vez sube el peso (la etiqueta naranja te lo indica). Si algo molesta en la zona lumbar, para ese ejercicio y consúltalo con tu médico o fisioterapeuta.</p>
     <p class="note">En los ejercicios con barra, anota solo el peso de los discos de cada lado (sin contar la barra). Sin discos = 0.</p>
     <p id="store" class="note"></p>
     <p class="note">Imágenes: <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noopener">Free Exercise DB</a> (dominio público).</p>
@@ -807,6 +822,7 @@ function niceStep(range){ const r = range/4, p = Math.pow(10, Math.floor(Math.lo
 window.addEventListener("resize", () => { if(tab==="prog"){ if(withData().length) drawChart(); renderWeight(); } });
 document.getElementById("pick").onchange = ev => { pickEx = ev.target.value; drawChart(); };
 function setTab(t){
+  if(tab !== t) window.scrollTo({top:0});
   tab = t;
   ["train","mus","cat","prog"].forEach(k => { document.getElementById("v-"+k).hidden = t!==k; document.getElementById("tab-"+k).setAttribute("aria-pressed", t===k); });
   render();
@@ -888,7 +904,7 @@ function bodies(marks, cls, sel){
 function exMarks(x){ const m = {}, e = EXM[x]; if(!e) return m; e.s.forEach(k => m[k]="sec"); e.p.forEach(k => m[k]="pri"); return m; }
 function musRow(x){
   const e = EXM[x]; if(!e) return "";
-  return `<div class="musrow"><div class="musinfo"><span class="lbl">Músculos</span><div>${e.p.map(k=>`<span class="mtag p">${MUS[k]}</span>`).join("")}${e.s.map(k=>`<span class="mtag s">${MUS[k]}</span>`).join("")}</div><span class="note">Verde fuerte: principal. Verde claro: ayuda.</span></div>${bodies(exMarks(x), "mini")}</div>`;
+  return `<div class="musrow"><div class="musinfo"><span class="lbl">Músculos</span><div>${e.p.map(k=>`<span class="mtag p">${MUS[k]}</span>`).join("")}${e.s.map(k=>`<span class="mtag s">${MUS[k]}</span>`).join("")}</div><span class="note">Naranja: principal. Marrón: ayuda.</span></div>${bodies(exMarks(x), "mini")}</div>`;
 }
 let musView = "week", selMus = null;
 function volume(view){
