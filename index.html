@@ -256,6 +256,12 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .tabs button svg{width:22px;height:22px}
 .tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .pickbar{top:6px}
+.streak{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.streak svg{width:20px;height:20px;fill:var(--accent);flex:none}
+.streak b{color:var(--ink);font-family:var(--mono)}
+.dlg.share{max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch}
+.dlg.share img{width:100%;height:auto;border-radius:12px;display:block;background:var(--bg)}
+.dlg.share .actions{justify-content:stretch}.dlg.share .actions .btn{flex:1}
 .sync{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--muted)}
 .sync .sync-txt{flex:1;min-width:0}
 .sync .btn{padding:8px 12px}
@@ -376,6 +382,7 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   </section>
 
   <div id="v-train" class="wrap" style="gap:14px">
+  <div id="streak" class="streak"></div>
   <section class="cal" aria-label="Calendario">
     <div class="calhead">
       <button class="navb" id="prev" aria-label="Mes anterior">‹</button>
@@ -567,6 +574,7 @@ function advice(exId, dateStr){
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 function trainedDates(){ const s = new Set(); Object.values(logs).forEach(l => s.add(l.date)); return s; }
 function renderCal(){
+  updateStreak();
   document.getElementById("mes").textContent = `${MESES[view.getMonth()]} ${view.getFullYear()}`;
   const g = document.getElementById("grid"); g.innerHTML = "";
   ["L","M","X","J","V","S","D"].forEach(d => { const el = document.createElement("div"); el.className="dow"; el.textContent=d; g.appendChild(el); });
@@ -611,11 +619,13 @@ function renderDay(){
     <div class="actions" style="justify-content:space-between"><div class="chips">${dayChips(exs).map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>
       <button class="edbtn" type="button" id="ed-open">Editar día</button></div>
     ${extra.length && p ? `<p class="note" style="margin:0">También registraste ese día ejercicios que ya no están en la rutina; aparecen al final.</p>` : ""}
-    <div class="list">${exs.map(x => card(x, key)).join("")}</div></div>`;
+    <div class="list">${exs.map(x => card(x, key)).join("")}</div>
+    ${doneN ? `<div class="actions"><button class="btn ${doneN===exs.length?"pri":"sec"}" type="button" id="share-open">Compartir entrenamiento</button></div>` : ""}</div>`;
   document.getElementById("ed-open").onclick = () => { editDay = wd; renderDay(); };
   box.querySelectorAll(".exhead").forEach(h => h.onclick = () => { const id = h.dataset.ex; open = open===id?null:id; renderDay(); if(open) document.getElementById("ex-"+id)?.scrollIntoView({block:"nearest",behavior:"smooth"}); });
   box.querySelectorAll("form").forEach(f => f.onsubmit = onSave);
   box.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { await deleteLog(b.dataset.del); render(); });
+  const sb = document.getElementById("share-open"); if(sb) sb.onclick = () => openShare(key);
 }
 function card(x, key){
   const e = EX[x], [i0,i1] = IMG(e.img), docId = key+"_"+x, mine = logs[docId], a = advice(x, key);
@@ -674,6 +684,128 @@ async function onSave(ev){
   const st2 = document.getElementById("st-"+x);
   if(st2) st2.textContent = ok ? "Guardado" : "Guardado en este navegador; no se pudo sincronizar.";
 }
+/* ---------- racha, récords y tarjeta compartible ---------- */
+// Racha: días entrenados seguidos. Los días de descanso de la rutina no la rompen; faltar a un día de entreno sí.
+function streakInfo(end){
+  end = end || today;
+  const done = trainedDates(), all = [...done].sort();
+  if(!all.length) return {cur:0, best:0};
+  const d = new Date(all[0]+"T00:00:00"), endKey = iso(end);
+  let run = 0, best = 0;
+  for(; iso(d) <= endKey; d.setDate(d.getDate()+1)){
+    const k = iso(d);
+    if(done.has(k)){ run++; if(run > best) best = run; }
+    else if(PLAN[d.getDay()] && k !== endKey) run = 0;
+  }
+  return {cur:run, best};
+}
+// Récord: ese día superaste tu mejor marca anterior en el ejercicio (peso, o repeticiones si es sin peso).
+function recordsOn(dateStr){
+  const out = [];
+  Object.values(logs).filter(l => l.date===dateStr && EX[l.ex] && l.sets?.length).forEach(l => {
+    const prev = Object.values(logs).filter(p => p.ex===l.ex && p.date < dateStr && p.sets?.length);
+    if(prev.length && metric(l) > Math.max(...prev.map(metric))) out.push(l.ex);
+  });
+  return out;
+}
+function updateStreak(){
+  const el = document.getElementById("streak"); if(!el) return;
+  const s = streakInfo();
+  el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 3.5-1.5 5-3 7.5-1.4 2.5-1 4.500.5 6C9 13.500 10.500 12 12 11c0 3 2.500 3.500 2.500 6.500 0 2-1 3.500-2.500 3.500-3.500 0-6-2.500-6-6C6 11 12 8 12 2z"/></svg>
+    <span>${s.cur ? `Racha de <b>${s.cur}</b> ${s.cur===1?"día":"días"}` : "Empieza tu racha hoy"}${s.best>1 ? ` · mejor <b>${s.best}</b>` : ""}</span>`;
+  el.title = "Cuenta los días que entrenas seguidos. Los días de descanso de tu rutina no la rompen.";
+}
+function shareInfo(key){
+  const d = new Date(key+"T00:00:00"), wd = d.getDay(), p = PLAN[wd];
+  const extra = Object.values(logs).filter(l => l.date===key && EX[l.ex] && !(p?.ex||[]).includes(l.ex)).map(l => l.ex);
+  const exs = [...(p?.ex||[]), ...extra];
+  const ws = weekStart(d), planned = Object.keys(PLAN).length;
+  const wk = [...trainedDates()].filter(x => x >= ws && x <= key).length;
+  return {key, fecha:`${DIAS[wd]} ${d.getDate()} de ${MESES[d.getMonth()]}`.toUpperCase(),
+    title:(p ? p.t : "Entrenamiento"), done:exs.filter(x => logs[key+"_"+x]).length, total:exs.length,
+    streak:streakInfo(d).cur, prs:recordsOn(key).length, week:wk, planned};
+}
+const logoImg = new Image(); logoImg.src = "logo.png";
+async function drawCard(info, name){
+  try{ await Promise.all([document.fonts.load('900 120px "Barlow Condensed"'), document.fonts.load('700 30px "Barlow"'), document.fonts.load('600 100px "IBM Plex Mono"')]); }catch(e){}
+  try{ await logoImg.decode(); }catch(e){}
+  const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d"), OR = "#F07726", DISP = '"Barlow Condensed","Arial Narrow",sans-serif', BODY = '"Barlow",system-ui,sans-serif', MONO = '"IBM Plex Mono",ui-monospace,monospace';
+  g.fillStyle = "#0A0A0A"; g.fillRect(0, 0, W, H);
+  // ondas decorativas (las del diseño de la app)
+  g.save(); g.translate(0, 900); g.scale(W/390, W/390); g.lineCap = "round"; g.strokeStyle = OR;
+  g.globalAlpha = .5; g.lineWidth = 3; g.stroke(new Path2D("M-10 170 C 60 170, 70 120, 120 120 S 170 200, 230 170 S 300 90, 400 110"));
+  g.globalAlpha = .22; g.lineWidth = 1.5; g.stroke(new Path2D("M-10 196 C 70 196, 90 150, 140 150 S 200 222, 260 196 S 320 130, 400 140")); g.restore();
+  // logo
+  if(logoImg.naturalWidth){ const lw = 280, lh = lw * logoImg.naturalHeight / logoImg.naturalWidth; g.drawImage(logoImg, (W-lw)/2, 60, lw, lh); }
+  g.textAlign = "center"; g.textBaseline = "alphabetic";
+  g.fillStyle = OR; g.font = `700 38px ${BODY}`; g.letterSpacing = "6px";
+  g.fillText((name ? name.toUpperCase() + "  ·  " : "") + info.fecha, W/2, 440); g.letterSpacing = "0px";
+  // título: se reduce o se parte en dos líneas para que quepa
+  const words = info.title.toUpperCase().split(" ");
+  let size = 190, lines;
+  const wrap = () => { const out = []; let cur = ""; words.forEach(w => { const t = cur ? cur+" "+w : w; if(cur && g.measureText(t).width > 960){ out.push(cur); cur = w; } else cur = t; }); out.push(cur); return out; };
+  for(;;){ g.font = `900 ${size}px ${DISP}`; lines = wrap(); if((lines.length <= 2 && lines.every(l => g.measureText(l).width <= 960)) || size <= 96) break; size -= 6; }
+  g.fillStyle = "#FFFFFF"; const lh2 = size * .94; let y = 440 + 40 + size * .8;
+  lines.forEach((l, i) => g.fillText(l, W/2, y + i*lh2));
+  y += (lines.length-1)*lh2 + 60;
+  // completado (círculo + texto, centrado como un solo bloque)
+  const done = info.done >= info.total ? "ENTRENAMIENTO COMPLETO" : `${info.done} DE ${info.total} EJERCICIOS`;
+  g.font = `800 52px ${DISP}`; g.letterSpacing = "3px"; const dw = g.measureText(done).width;
+  const bx = (W - (60 + 20 + dw)) / 2, cx = bx + 30;
+  g.fillStyle = OR; g.beginPath(); g.arc(cx, y - 14, 30, 0, Math.PI*2); g.fill();
+  g.strokeStyle = "#0A0A0A"; g.lineWidth = 7; g.lineCap = "round"; g.lineJoin = "round"; g.beginPath(); g.moveTo(cx-14, y-13); g.lineTo(cx-2, y-1); g.lineTo(cx+17, y-28); g.stroke();
+  g.fillStyle = "#FFFFFF"; g.textAlign = "left"; g.fillText(done, bx + 80, y + 4); g.letterSpacing = "0px"; g.textAlign = "center";
+  // tres cifras (sin pesos ni medidas)
+  const tiles = [["RACHA", String(info.streak), info.streak===1?"día":"días", true], ["RÉCORDS", String(info.prs), info.prs===1?"nuevo":"nuevos", false], ["SEMANA", `${info.week}/${info.planned}`, "entrenos", false]];
+  const tw = 300, gap = 30, x0 = (W - (3*tw + 2*gap)) / 2, ty = y + 70, th = 270;
+  tiles.forEach((t, i) => {
+    const x = x0 + i*(tw+gap), hot = t[3];
+    g.fillStyle = hot ? OR : "#161616"; g.beginPath(); g.roundRect(x, ty, tw, th, 28); g.fill();
+    if(!hot){ g.strokeStyle = "#262626"; g.lineWidth = 3; g.stroke(); }
+    g.fillStyle = hot ? "#0A0A0A" : "#A3A3A3"; g.font = `700 30px ${BODY}`; g.letterSpacing = "4px"; g.fillText(t[0], x + tw/2, ty + 56); g.letterSpacing = "0px";
+    g.fillStyle = hot ? "#0A0A0A" : "#FFFFFF"; g.font = `600 ${t[1].length > 3 ? 92 : 120}px ${MONO}`; g.fillText(t[1], x + tw/2, ty + 178);
+    g.fillStyle = hot ? "#0A0A0A" : "#A3A3A3"; g.font = `600 30px ${BODY}`; g.fillText(t[2], x + tw/2, ty + 228);
+  });
+  // pie
+  g.fillStyle = OR; g.font = `900 64px ${DISP}`; g.letterSpacing = "4px"; g.fillText("#TEAMROCK", W/2, H - 190); g.letterSpacing = "0px";
+  return c;
+}
+function openShare(key){
+  const info = shareInfo(key);
+  let name = ""; try{ name = localStorage.getItem("gymname") || ""; }catch(e){}
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="dlg share" role="dialog" aria-modal="true" aria-label="Compartir entrenamiento">
+    <img id="sh-img" alt="Vista previa de la tarjeta" width="1080" height="1350">
+    <label class="lbl" for="sh-name">Tu nombre en la tarjeta (opcional)</label>
+    <input id="sh-name" class="search" maxlength="24" autocomplete="off" placeholder="Sin nombre" value="${esc(name)}">
+    <p class="note">La tarjeta no muestra pesos, medidas ni datos de tu cuerpo: solo tu constancia.</p>
+    <div class="actions"><button class="btn sec" type="button" data-close>Cerrar</button><button class="btn sec" type="button" data-dl>Descargar</button><button class="btn pri" type="button" data-share>Compartir</button></div>
+    <span class="status" id="sh-st"></span></div>`;
+  let canvas = null, timer = null;
+  const st = m.querySelector("#sh-st"), img = m.querySelector("#sh-img"), inp = m.querySelector("#sh-name");
+  const close = () => { m.remove(); document.removeEventListener("keydown", onKey); clearTimeout(timer); };
+  const onKey = e => { if(e.key==="Escape") close(); };
+  const paint = async () => { canvas = await drawCard(info, inp.value.trim()); img.src = canvas.toDataURL("image/png"); };
+  const blob = () => new Promise(r => canvas.toBlob(r, "image/png"));
+  const fname = `rock-and-rolls-${info.key}.png`;
+  const download = async () => { const url = URL.createObjectURL(await blob()); const a = document.createElement("a"); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); st.textContent = "Imagen descargada."; };
+  inp.oninput = () => { try{ localStorage.setItem("gymname", inp.value.trim()); }catch(e){} clearTimeout(timer); timer = setTimeout(paint, 250); };
+  m.querySelector("[data-close]").onclick = close;
+  m.onclick = e => { if(e.target===m) close(); };
+  m.querySelector("[data-dl]").onclick = download;
+  m.querySelector("[data-share]").onclick = async () => {
+    if(!canvas) await paint();
+    const file = new File([await blob()], fname, {type:"image/png"});
+    try{
+      if(navigator.canShare && navigator.canShare({files:[file]})) await navigator.share({files:[file], text:"Entrenamiento completado #TeamRock"});
+      else await download();
+    }catch(e){ if(e && e.name !== "AbortError") st.textContent = "No se pudo abrir el menú de compartir; usa Descargar."; }
+  };
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(m); paint();
+}
+
 /* ---------- progreso ---------- */
 let tab = "train", pickEx = null;
 let ORDER = [1,2,3,4,5].flatMap(d => PLAN[d].ex);
