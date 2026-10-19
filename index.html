@@ -256,6 +256,10 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .tabs button svg{width:22px;height:22px}
 .tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .pickbar{top:6px}
+.rot{background:var(--accent-soft);border:1px solid #4A2A12;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.rot .lbl{color:var(--accent)}
+.pq{display:flex;flex-direction:column;gap:6px}
+.tips{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px}
 .streak{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
 .streak svg{width:20px;height:20px;fill:var(--accent);flex:none}
 .streak b{color:var(--ink);font-family:var(--mono)}
@@ -263,7 +267,7 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .dlg.share img{width:100%;height:auto;border-radius:12px;display:block;background:var(--bg)}
 .dlg.share .actions{justify-content:stretch}.dlg.share .actions .btn{flex:1}
 .sync{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--muted)}
-.sync .sync-txt{flex:1;min-width:0}
+.sync .sync-txt{flex:1 1 200px;min-width:0}
 .sync .btn{padding:8px 12px}
 .sync-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
 .sync[data-state="on"] .sync-dot{background:var(--accent)}
@@ -303,7 +307,7 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
       </div>
       <div class="fchips" id="cat-mus" role="group" aria-label="Músculo"></div>
       <div class="fchips" id="cat-eq" role="group" aria-label="Equipo"></div>
-      <label class="chk"><input type="checkbox" id="cat-safe"> Ocultar los que tienen riesgo para la lumbar</label>
+      <label class="chk"><input type="checkbox" id="cat-safe"> Ocultar los que tienen riesgo para mis zonas</label>
     </div>
     <div class="sub" id="cat-count"></div>
     <div class="list" id="cat-list"></div>
@@ -318,6 +322,7 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
       <div id="bigmap" class="bodies click"></div>
       <div class="legend"><span><i style="background:var(--mus-0)"></i>Sin trabajo</span><span><i style="background:var(--mus-sec)"></i>Menos de 10 series</span><span><i style="background:var(--accent)"></i>10 series o más</span></div>
       <p class="note" id="musnote"></p>
+      <div id="cober"></div>
     </div>
     <div class="panel">
       <div class="lbl">Series por músculo · toca uno para ver sus ejercicios</div>
@@ -368,6 +373,7 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
       <div class="lbl">Primera vez → última vez</div>
       <div id="plist"></div>
     </div>
+    <div class="panel" id="perfilbox"></div>
     <div class="panel">
       <div class="lbl">Tus datos</div>
       <p class="note">Se guardan en la nube con tu cuenta de Google. Solo tú puedes verlos.</p>
@@ -522,9 +528,10 @@ let open = null;
 
 let weights = {};         // docId "peso_YYYY-MM-DD" -> {peso,date,ts}
 let meds = {};            // docId "medidas_YYYY-MM-DD" -> {tipo,date,biceps,...}
-let rutina = null;        // {tipo:"rutina", dias:{wd:{t,ex}}, ts}
-function lsLoad(){ try{ rutina = JSON.parse(localStorage.getItem("gymrut")||"null") }catch(e){ rutina = null } try{ logs = JSON.parse(localStorage.getItem("gymlogs")||"{}") }catch(e){ logs = {} } try{ weights = JSON.parse(localStorage.getItem("gympeso")||"{}") }catch(e){ weights = {} } try{ meds = JSON.parse(localStorage.getItem("gymmed")||"{}") }catch(e){ meds = {} } }
-function lsSave(){ try{ localStorage.setItem("gymlogs", JSON.stringify(logs)); localStorage.setItem("gympeso", JSON.stringify(weights)); localStorage.setItem("gymmed", JSON.stringify(meds)); localStorage.setItem("gymrut", JSON.stringify(rutina)) }catch(e){} }
+let rutina = null;        // {tipo:"rutina", dias:{wd:{t,ex}}, desde, ign, ts}
+let perfil = null;        // {tipo:"perfil", obj, dias, exp, zonas, tiempo, ts}
+function lsLoad(){ try{ perfil = JSON.parse(localStorage.getItem("gymperfil")||"null") }catch(e){ perfil = null } try{ rutina = JSON.parse(localStorage.getItem("gymrut")||"null") }catch(e){ rutina = null } try{ logs = JSON.parse(localStorage.getItem("gymlogs")||"{}") }catch(e){ logs = {} } try{ weights = JSON.parse(localStorage.getItem("gympeso")||"{}") }catch(e){ weights = {} } try{ meds = JSON.parse(localStorage.getItem("gymmed")||"{}") }catch(e){ meds = {} } }
+function lsSave(){ try{ localStorage.setItem("gymlogs", JSON.stringify(logs)); localStorage.setItem("gympeso", JSON.stringify(weights)); localStorage.setItem("gymmed", JSON.stringify(meds)); localStorage.setItem("gymrut", JSON.stringify(rutina)); localStorage.setItem("gymperfil", JSON.stringify(perfil)) }catch(e){} }
 lsLoad();
 const storeNote = document.getElementById("store");
 
@@ -559,6 +566,11 @@ function advice(exId, dateStr){
   const minKg = Math.min(...sets.map(s => s.kg||0));
   // con el peso más alto no se completó el mínimo del rango: recomendar uno con el que sí se termina la serie
   const short = sets.filter(s => (s.kg||0)===kg && s.reps < e.r[0]);
+  if(short.length && e.r[0] - Math.min(...short.map(s => s.reps)) <= 2){
+    const falta = e.r[0] - Math.min(...short.map(s => s.reps));
+    return {cls:"hold", txt:`Mantén ${fmt(kg)} kg`, kg,
+      why:`Con ${fmt(kg)} kg te ${falta===1?"faltó 1 repetición":"faltaron "+falta+" repeticiones"} para llegar a ${e.r[0]}. Repite el peso y busca completar ${e.r[0]} en todas las series.`};
+  }
   if(short.length){
     const ok = [...new Set(sets.map(s => s.kg||0))].filter(k => k < kg && sets.filter(s => (s.kg||0)===k).every(s => s.reps >= e.r[0]));
     const to = ok.length ? Math.max(...ok) : Math.max(0, Math.round((kg - e.inc)*100)/100);
@@ -619,6 +631,7 @@ function renderDay(){
     <div class="actions" style="justify-content:space-between"><div class="chips">${dayChips(exs).map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>
       <button class="edbtn" type="button" id="ed-open">Editar día</button></div>
     ${extra.length && p ? `<p class="note" style="margin:0">También registraste ese día ejercicios que ya no están en la rutina; aparecen al final.</p>` : ""}
+    ${key >= iso(today) && p ? rotPanel(wd, p.ex) : ""}
     <div class="list">${exs.map(x => card(x, key)).join("")}</div>
     ${doneN ? `<div class="actions"><button class="btn ${doneN===exs.length?"pri":"sec"}" type="button" id="share-open">Compartir entrenamiento</button></div>` : ""}</div>`;
   document.getElementById("ed-open").onclick = () => { editDay = wd; renderDay(); };
@@ -626,6 +639,7 @@ function renderDay(){
   box.querySelectorAll("form").forEach(f => f.onsubmit = onSave);
   box.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { await deleteLog(b.dataset.del); render(); });
   const sb = document.getElementById("share-open"); if(sb) sb.onclick = () => openShare(key);
+  bindRot(box);
 }
 function card(x, key){
   const e = EX[x], [i0,i1] = IMG(e.img), docId = key+"_"+x, mine = logs[docId], a = advice(x, key);
@@ -822,7 +836,7 @@ function renderProg(){
   document.getElementById("s-ses").textContent = dates.length;
   document.getElementById("s-week").textContent = dates.filter(d => d >= ws && d <= iso(today)).length + "/" + Object.keys(PLAN).length;
   document.getElementById("s-up").textContent = upN;
-  renderWeight();
+  renderWeight(); renderPerfilBox();
   const pick = document.getElementById("pick");
   if(!ex.length){
     pick.innerHTML = `<option>Sin registros todavía</option>`; pick.disabled = true;
@@ -1069,8 +1083,11 @@ function renderMus(){
     document.getElementById("musnote").textContent = `Semana del ${d.getDate()} al ${e.getDate()} de ${MESES[e.getMonth()]}: has trabajado ${worked} de ${keys.length} grupos musculares.`;
   } else {
     const low = keys.filter(k => v[k]<10).map(k => MUS[k]);
-    document.getElementById("musnote").textContent = `Con la rutina completa, por debajo de 10 series semanales: ${low.join(", ")}.`;
+    document.getElementById("musnote").textContent = low.length ? `Con la rutina completa, por debajo de 10 series semanales: ${low.join(", ")}.` : "";
   }
+  const cob = document.getElementById("cober");
+  cob.innerHTML = musView==="plan" ? coberturaHTML(v) : "";
+  cob.querySelectorAll("[data-cob]").forEach(b => b.onclick = async () => { if(await confirmToggle(b.dataset.cob, +b.dataset.wd, true)) renderMus(); });
   document.getElementById("mlist").innerHTML = keys.map(k => `<button class="mrow${k===selMus?" sel":""}" type="button" data-mk="${k}"><span>${MUS[k]}</span><span class="bar"><span style="width:${Math.min(v[k]/20,1)*100}%"></span><i class="tgt" style="left:50%"></i></span><span class="num">${fmt(v[k])}</span></button>`).join("");
   document.querySelectorAll("#mlist .mrow").forEach(b => b.onclick = () => { selMus = selMus===b.dataset.mk ? null : b.dataset.mk; renderMus(); });
   const det = document.getElementById("mdetail");
@@ -1130,14 +1147,210 @@ function applyRutina(){
   Object.entries(src).forEach(([d,v]) => { const ex = (v.ex||[]).filter(x => EX[x]); if(ex.length) next[d] = {t: v.t || "Entrenamiento", ex}; });
   PLAN = next;
   ORDER = ORDEN_DIAS.flatMap(d => PLAN[d]?.ex || []);
+  applySeries();
 }
 const planKey = dias => JSON.stringify(ORDEN_DIAS.filter(d => dias[d]?.ex?.length).map(d => [d, dias[d].t, dias[d].ex]));
 const esRecomendada = () => !rutina?.dias || planKey(rutina.dias) === planKey(DEFAULT_PLAN);
 async function saveRutina(dias, ts){
   const limpio = {}; Object.entries(dias).forEach(([d,v]) => limpio[d] = {t: v.t || "", ex: [...new Set(v.ex||[])]});
-  rutina = {tipo:"rutina", dias: limpio, ts: ts || Date.now()}; lsSave(); applyRutina();
+  // desde: cuándo entró cada ejercicio a la rutina (para sugerir cambios de máquina)
+  const prev = rutina?.desde || {}, backfill = !rutina?.desde, hoy = iso(today), desde = {};
+  Object.values(limpio).forEach(v => v.ex.forEach(x => desde[x] = prev[x] || (backfill ? earliestLog(x) : null) || hoy));
+  rutina = {tipo:"rutina", dias: limpio, desde, ign: rutina?.ign || {}, ts: ts || Date.now()}; lsSave(); applyRutina();
   if(col){ try{ await col.doc("rutina").set(rutina) }catch(e){} }
 }
+/* ---------- perfil, generador de rutinas y rotación de máquinas ---------- */
+// Riesgo por articulación (además de la lumbar, que va en EX[x].risk): 1 = con cuidado, 2 = evitar si molesta.
+const JOINT = {
+  rodilla: {"Smith_Single-Leg_Split_Squat":2, "Narrow_Stance_Hack_Squats":2,
+    prensa:1, goblet:1, extension:1, Leg_Extensions:1, "Single-Leg_Leg_Extension":1, Hack_Squat:1, Lying_Machine_Squat:1,
+    Narrow_Stance_Leg_Press:1, Smith_Machine_Leg_Press:1, Smith_Machine_Squat:1, Glute_Ham_Raise:1},
+  hombro: {Smith_Machine_Upright_Row:2, Upright_Cable_Row:2, "Smith_Machine_One-Arm_Upright_Row":2, Dip_Machine:2, Low_Pulley_Row_To_Neck:2,
+    banca:1, inclinado:1, Smith_Machine_Bench_Press:1, Smith_Machine_Incline_Bench_Press:1, Decline_Smith_Press:1, Smith_Machine_Decline_Press:1,
+    pressh:1, Leverage_Shoulder_Press:1, Cable_Shoulder_Press:1, Seated_Cable_Shoulder_Press:1, Alternating_Cable_Shoulder_Press:1,
+    Smith_Machine_Overhead_Shoulder_Press:1, pecdeck:1, Flat_Bench_Cable_Flyes:1, Incline_Cable_Flye:1, Cable_Iron_Cross:1, pullover:1,
+    "Rope_Straight-Arm_Pulldown":1, frances:1, trinuca:1, Triceps_Overhead_Extension_with_Rope:1, "Standing_Low-Pulley_One-Arm_Triceps_Extension":1,
+    Cable_Incline_Triceps_Extension:1, "Smith_Machine_Close-Grip_Bench_Press":1}
+};
+const ZNOM = {lumbar:"lumbar", rodilla:"rodilla", hombro:"hombro"};
+const riskOf = (x, z) => z === "lumbar" ? (EX[x]?.risk || 0) : (JOINT[z]?.[x] || 0);
+// sin perfil (usuarios de antes) se cuida la lumbar, como la rutina original
+const zonasActuales = () => perfil ? (perfil.zonas || []) : ["lumbar"];
+const riskFor = x => Math.max(0, ...zonasActuales().map(z => riskOf(x, z)));
+const BIG = ["pecho","dorsal","trapecio","cuadriceps","gluteos","isquios","delt_front"];
+const PRINC_BASE = new Set(["prensa","goblet","banca","inclinado","hipthrust","jalon","remopolea","remoapoyado","pressh"]);
+const isPrinc = x => PRINC_BASE.has(x) || (!!CAT[x] && CAT[x][7] === 1 && (EXM[x]?.p || []).some(k => BIG.includes(k)));
+// fuera del generador (siguen en el catálogo): rotaciones de rehabilitación y remos al mentón, discutidos para el hombro
+const NOGEN = new Set(["Cable_Internal_Rotation","External_Rotation_with_Cable","Smith_Machine_Behind_the_Back_Shrug",
+  "Smith_Machine_Upright_Row","Upright_Cable_Row","Smith_Machine_One-Arm_Upright_Row","Low_Pulley_Row_To_Neck"]);
+
+// Plantillas: "músculo:P" = ejercicio principal, "músculo:A" = accesorio. Se toman tantos como permita el tiempo.
+const PLANT = {
+  FA:{t:"Cuerpo completo A", s:"cuadriceps:P pecho:P dorsal:P isquios:A delt_side:A biceps:A triceps:A abdomen:A"},
+  FB:{t:"Cuerpo completo B", s:"gluteos:P trapecio:P delt_front:P cuadriceps:A pecho:A delt_rear:A gemelos:A oblicuos:A"},
+  FC:{t:"Cuerpo completo C", s:"cuadriceps:P dorsal:P pecho:P isquios:A gluteos:A triceps:A biceps:A abdomen:A"},
+  TO:{t:"Torso", s:"pecho:P dorsal:P delt_front:P trapecio:P delt_side:A triceps:A biceps:A delt_rear:A"},
+  PI:{t:"Pierna", s:"cuadriceps:P isquios:A gluteos:P cuadriceps:A gemelos:A abdomen:A aductores:A oblicuos:A"},
+  EM:{t:"Empuje", s:"pecho:P delt_front:P pecho:A delt_side:A triceps:A triceps:A delt_side:A abdomen:A"},
+  TI:{t:"Tirón", s:"dorsal:P trapecio:P dorsal:A delt_rear:A biceps:A biceps:A antebrazo:A abdomen:A"},
+  PG:{t:"Pierna y glúteo", s:"gluteos:P isquios:A cuadriceps:P gluteos:A gemelos:A oblicuos:A aductores:A abdomen:A"}
+};
+const TEMPL = {2:["FA","FB"], 3:["FA","FB","FC"], 4:["TO","PI","TO","PI"], 5:["TO","PI","EM","TI","PG"], 6:["EM","TI","PI","EM","TI","PI"]};
+const DIAS_POR = {2:[1,4], 3:[1,3,5], 4:[1,2,4,5], 5:[1,2,3,4,5], 6:[1,2,3,4,5,6]};
+const NEX = {45:5, 60:6, 90:8};
+function elegirEj(key, kind, used, zonas, avoid){
+  let c = Object.keys(EX).filter(x => EXM[x]?.p.includes(key) && !NOGEN.has(x) && !avoid.has(x) && zonas.every(z => riskOf(x, z) < 2));
+  const k2 = c.filter(x => kind === "P" ? isPrinc(x) : !isPrinc(x)); if(k2.length) c = k2;
+  if(!c.length) return null;
+  const score = x => (used.has(x) ? 100 : 0) + (EXM[x].p[0] === key ? 0 : 5) + zonas.reduce((a, z) => a + riskOf(x, z), 0) * 3
+    + (EX[x].eq === "l" || EX[x].eq === "p" ? 2 : 0) + (EX[x].rec ? 0 : 1);
+  c.sort((a, b) => score(a) - score(b) || a.localeCompare(b));
+  const best = c.filter(x => score(x) === score(c[0]));
+  return best[used.size % best.length];
+}
+function generar(p){
+  const zonas = p.zonas || [], used = new Set(), dias = {};
+  TEMPL[p.dias].forEach((code, i) => {
+    const t = PLANT[code], ex = [];
+    t.s.split(" ").slice(0, NEX[p.tiempo] || 6).forEach(sl => { const [k, kind] = sl.split(":"); const x = elegirEj(k, kind, used, zonas, new Set(ex)); if(x){ ex.push(x); used.add(x); } });
+    dias[DIAS_POR[p.dias][i]] = {t: t.t, ex};
+  });
+  return dias;
+}
+// series por ejercicio según experiencia
+function applySeries(){
+  Object.values(EX).forEach(e => { if(e.s0 == null) e.s0 = e.s;
+    e.s = perfil?.exp === "ava" ? Math.min(e.s0 + 1, 5) : perfil?.exp === "pri" ? Math.min(e.s0, 3) : e.s0; });
+}
+const OPC = {
+  obj: [["musculo","Ganar músculo"],["grasa","Bajar grasa sin perder músculo"],["salud","Salud y fuerza general"]],
+  dias: [[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"]],
+  exp: [["pri","Menos de 6 meses"],["int","6 meses a 2 años"],["ava","Más de 2 años"]],
+  zonas: [["lumbar","Lumbar"],["rodilla","Rodilla"],["hombro","Hombro"]],
+  tiempo: [[45,"45 min"],[60,"60 min"],[90,"90 min"]]
+};
+const nomOpc = (k, v) => (OPC[k].find(o => String(o[0]) === String(v)) || [, ""])[1];
+const CONSEJOS = {
+  musculo: ["Come un poco por encima de lo que gastas (unas 300 kcal más) y entre 1,6 y 2,2 g de proteína por kg de peso al día.",
+            "Duerme 7–9 horas: ahí se recupera y crece el músculo.",
+            "Sube el peso cuando completes el tope del rango en todas las series; la etiqueta naranja te avisa."],
+  grasa:   ["Come un poco por debajo de lo que gastas (300–500 kcal menos) y mantén la proteína alta, 1,6–2,2 g por kg.",
+            "Intenta mantener tus pesos: es la señal que le dice al cuerpo que conserve el músculo.",
+            "Suma 20–30 minutos de cardio suave 2–3 días por semana o camina más cada día."],
+  salud:   ["La constancia vale más que la intensidad: mejor 3 días todas las semanas que 6 días un mes y luego nada.",
+            "Complementa con caminatas diarias y estiramientos suaves.",
+            "Trabaja a 2–3 repeticiones del fallo: suficiente para progresar sin cargarte de cansancio."]
+};
+let perfilAsked = false;
+function maybeOnboard(){
+  if(perfilAsked || perfil || rutina || Object.keys(logs).length) return;
+  perfilAsked = true; openPerfil(false);
+}
+function openPerfil(rehacer){
+  const p = clone(perfil || {obj:"musculo", dias:3, exp:"int", zonas:[], tiempo:60});
+  const m = document.createElement("div"); m.className = "modal";
+  const q = (k, title, multi) => `<div class="pq"><div class="lbl">${title}</div><div class="fchips" data-k="${k}">${OPC[k].map(([v, t]) =>
+    `<button type="button" data-v="${v}" aria-pressed="${multi ? p[k].includes(v) : String(p[k]) === String(v)}">${t}</button>`).join("")}</div></div>`;
+  m.innerHTML = `<div class="dlg share" role="dialog" aria-modal="true" aria-label="Arma tu rutina">
+    <h2 style="margin:0">Arma tu rutina</h2>
+    <p class="note" style="margin:0">Cinco preguntas. Después puedes cambiar ejercicios y días cuando quieras.</p>
+    ${q("obj","1. Objetivo")}${q("dias","2. Días por semana")}${q("exp","3. Experiencia")}
+    ${q("zonas","4. Zonas a cuidar (marca las que apliquen; ninguna si estás bien)", true)}${q("tiempo","5. Tiempo por sesión")}
+    <p class="note" style="margin:0">Si tienes una lesión, la app evita los ejercicios de riesgo para esa zona, pero no reemplaza a tu médico o fisioterapeuta.</p>
+    <div class="actions"><button class="btn sec" type="button" data-no>${rehacer ? "Cancelar" : "Ahora no"}</button><button class="btn pri" type="button" data-ok>Crear mi rutina</button></div></div>`;
+  m.querySelectorAll(".fchips").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => {
+    const k = g.dataset.k, v = isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v;
+    if(k === "zonas"){ p.zonas = p.zonas.includes(v) ? p.zonas.filter(z => z !== v) : [...p.zonas, v]; b.setAttribute("aria-pressed", p.zonas.includes(v)); }
+    else { p[k] = v; g.querySelectorAll("button").forEach(o => o.setAttribute("aria-pressed", o === b)); }
+  }));
+  const close = () => m.remove();
+  m.querySelector("[data-no]").onclick = close;
+  m.querySelector("[data-ok]").onclick = async () => {
+    if(rutina && !await askConfirm("Tu rutina actual se reemplaza por una nueva. Tus registros y tu historial no se borran.", "Sí, crear", false)) return;
+    close();
+    perfil = {...p, tipo:"perfil", ts: Date.now()}; lsSave(); applySeries();
+    if(col){ try{ await col.doc("perfil").set(perfil) }catch(e){} }
+    await saveRutina(generar(perfil));
+    sel = new Date(today); open = null; editDay = null; setTab("train"); render();
+  };
+  document.body.appendChild(m);
+}
+function renderPerfilBox(){
+  const box = document.getElementById("perfilbox"); if(!box) return;
+  if(!perfil){
+    box.innerHTML = `<div class="lbl">Tu perfil</div><p class="note">Responde 5 preguntas y la app arma una rutina para tu objetivo, tus días y las zonas que debes cuidar.</p>
+      <div class="actions"><button class="btn sec" type="button" id="pf-open">Armar mi rutina</button></div>`;
+  } else {
+    box.innerHTML = `<div class="lbl">Tu perfil</div>
+      <p style="margin:0">${esc(nomOpc("obj", perfil.obj))} · ${perfil.dias} días · ${esc(nomOpc("exp", perfil.exp).toLowerCase())} · ${perfil.tiempo} min${perfil.zonas?.length ? ` · cuidar ${perfil.zonas.map(z => ZNOM[z]).join(", ")}` : ""}</p>
+      <div class="lbl" style="margin-top:6px">Consejos para tu objetivo</div>
+      <ul class="tips">${(CONSEJOS[perfil.obj] || []).map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+      <div class="actions"><button class="btn sec" type="button" id="pf-open">Rehacer mi rutina</button></div>`;
+  }
+  document.getElementById("pf-open").onclick = () => openPerfil(true);
+}
+
+// ---- rotación: accesorios cada 4 semanas, principales cada 6, o antes si te estancas ----
+const earliestLog = x => { const h = history(x); return h.length ? h[h.length - 1].date : null; };
+const desdeDe = x => rutina?.desde?.[x] || earliestLog(x);
+const weeksSince = d => Math.floor((today - new Date(d + "T00:00")) / (7 * 864e5));
+function e1rm(l){ const s = l.sets.filter(z => z.reps > 0); if(!s.length) return 0;
+  return bodyOnly(l.ex) ? Math.max(...s.map(z => z.reps)) : Math.max(...s.map(z => (z.kg || 0) * (1 + z.reps / 30))); }
+function estancado(x){ const h = history(x).slice().reverse(); if(h.length < 4) return false;
+  const last = h.slice(-3), prev = h.slice(0, -3); return Math.max(...last.map(e1rm)) <= Math.max(...prev.map(e1rm)) + 0.01; }
+function alternativas(x){
+  const k = EXM[x]?.p[0]; if(!k) return [];
+  const mine = new Set(Object.values(PLAN).flatMap(d => d.ex)), pr = isPrinc(x), zonas = zonasActuales();
+  return Object.keys(EX).filter(y => y !== x && !mine.has(y) && !NOGEN.has(y) && EXM[y]?.p.includes(k) && zonas.every(z => riskOf(y, z) < 2))
+    .sort((a, b) => (isPrinc(a) !== pr) - (isPrinc(b) !== pr) || (EXM[a].p[0] !== k) - (EXM[b].p[0] !== k)
+      || (EX[a].eq === EX[x].eq) - (EX[b].eq === EX[x].eq) || riskFor(a) - riskFor(b) || EX[a].n.localeCompare(EX[b].n, "es"));
+}
+function rotacion(x){
+  const ign = rutina?.ign?.[x]; if(ign && weeksSince(ign) < 2) return null;
+  const d = desdeDe(x); if(!d) return null;
+  const w = weeksSince(d), lim = isPrinc(x) ? 6 : 4;
+  let why = "";
+  if(estancado(x)) why = `Llevas 3 sesiones sin mejorar en ${EX[x].n}. Un cambio de máquina suele destrabar el progreso.`;
+  else if(w >= lim) why = `Llevas ${w} semanas con ${EX[x].n}. Cambiar de máquina trabaja el músculo desde otro ángulo.`;
+  if(!why) return null;
+  const alts = alternativas(x); return alts.length ? {why, alts} : null;
+}
+const rotIdx = {};
+function rotPanel(wd, exs){
+  const items = exs.map(x => ({x, r: rotacion(x)})).filter(o => o.r).slice(0, 2);
+  if(!items.length) return "";
+  return items.map(({x, r}) => { const y = r.alts[(rotIdx[x] || 0) % r.alts.length];
+    return `<div class="rot"><div class="lbl">Cambio sugerido</div><p style="margin:0">${esc(r.why)}</p>
+      <p style="margin:0">Prueba: <b>${esc(EX[y].n)}</b> <span class="note">· ${EQN[EX[y].eq]}${riskFor(y) ? " · con cuidado" : ""}</span></p>
+      <div class="actions"><button class="btn pri" type="button" data-rot-ok="${x}" data-y="${y}" data-wd="${wd}">Cambiar</button>
+        ${r.alts.length > 1 ? `<button class="btn sec" type="button" data-rot-next="${x}">Otra opción</button>` : ""}
+        <button class="btn sec" type="button" data-rot-no="${x}">Ahora no</button></div></div>`; }).join("");
+}
+function bindRot(box){
+  box.querySelectorAll("[data-rot-next]").forEach(b => b.onclick = () => { const x = b.dataset.rotNext; rotIdx[x] = (rotIdx[x] || 0) + 1; renderDay(); });
+  box.querySelectorAll("[data-rot-no]").forEach(b => b.onclick = async () => { const x = b.dataset.rotNo;
+    rutina = rutina || {tipo:"rutina", dias: curDias()}; rutina.ign = {...(rutina.ign || {}), [x]: iso(today)}; await saveRutina(curDias()); render(); });
+  box.querySelectorAll("[data-rot-ok]").forEach(b => b.onclick = async () => { const x = b.dataset.rotOk, y = b.dataset.y, wd = b.dataset.wd;
+    if(!await askConfirm(`¿Cambiar <b>${esc(EX[x].n)}</b> por <b>${esc(EX[y].n)}</b> los ${DIAS[wd]}?<br><span class="note">Tu historial de ${esc(EX[x].n)} se conserva.</span>`, "Sí, cambiar", false)) return;
+    const dias = curDias(); if(dias[wd]) dias[wd].ex = dias[wd].ex.map(z => z === x ? y : z);
+    await saveRutina(dias); open = y; render(); });
+}
+// ---- cuerpo completo: músculos por debajo de la meta, con una propuesta concreta ----
+function mejorDia(k){
+  const z = GRUPOS[grupoDe(k)]?.z, ds = Object.keys(PLAN);
+  const fit = ds.filter(d => PLAN[d].ex.some(x => (EXM[x]?.p || []).some(m => GRUPOS[grupoDe(m)]?.z === z)));
+  return (fit.length ? fit : ds).sort((a, b) => PLAN[a].ex.length - PLAN[b].ex.length)[0];
+}
+function coberturaHTML(v){
+  const mine = new Set(Object.values(PLAN).flatMap(d => d.ex)), zonas = zonasActuales();
+  const rows = Object.keys(MUS).filter(k => k !== "lumbar" && v[k] < 10).map(k => {
+    const x = elegirEj(k, "A", new Set(), zonas, mine) || elegirEj(k, "P", new Set(), zonas, mine), wd = mejorDia(k);
+    if(!x || wd == null) return "";
+    return `<div class="exline"><span><b>${MUS[k]}</b>: ${fmt(v[k])} series por semana. Propuesta: ${esc(EX[x].n)}</span>
+      <button class="btn sec" type="button" data-cob="${x}" data-wd="${wd}">Agregar a los ${DIAS[wd]}</button></div>`; }).filter(Boolean);
+  return rows.length ? `<div class="lbl" style="margin-top:8px">Para trabajar el cuerpo completo</div>${rows.join("")}` : `<p class="note">Tu rutina llega a 10 series semanales en todos los grupos.</p>`;
+}
+
 const daysOf = x => ORDEN_DIAS.filter(d => PLAN[d]?.ex.includes(x));
 const titleFor = x => { const g = grupoDe(EXM[x]?.p[0]); return g ? GRUPOS[g].n : "Entrenamiento"; };
 async function confirmToggle(x, wd, add){
@@ -1224,7 +1437,7 @@ function catItems(){
   const words = norm(catQ.trim()).split(/\s+/).filter(Boolean);
   return Object.keys(EX).filter(x => {
     const e = EX[x], m = EXM[x] || {p:[], s:[]};
-    if(catSafe && e.risk===2) return false;
+    if(catSafe && riskFor(x)===2) return false;
     if(catEq!=="all" && e.eq!==catEq && !(catEq==="l" && e.eq==="p")) return false;
     if(catMus && !m.p.some(k => GRUPOS[catMus].k.includes(k))) return false;
     if(catZone!=="all" && !m.p.some(k => GRUPOS[grupoDe(k)]?.z===catZone)) return false;
@@ -1237,7 +1450,7 @@ function catCard(x){
   const badges = [`<span class="badge">${EQN[e.eq]}</span>`];
   if(ds.length) badges.push(`<span class="badge mine">Tu rutina · ${ds.map(d => DIAS[d].slice(0,3)).join(", ")}</span>`);
   else if(e.rec) badges.push(`<span class="badge mine">Recomendado</span>`);
-  if(e.risk===2) badges.push(`<span class="badge r2">Riesgo lumbar</span>`); else if(e.risk===1) badges.push(`<span class="badge r1">Cuidado lumbar</span>`);
+  zonasActuales().forEach(z => { const r = riskOf(x, z); if(r===2) badges.push(`<span class="badge r2">Riesgo ${ZNOM[z]}</span>`); else if(r===1) badges.push(`<span class="badge r1">Cuidado ${ZNOM[z]}</span>`); });
   const inPick = catPickDay!==null && !!PLAN[catPickDay]?.ex.includes(x);
   const add = inPick ? `<span class="inday" title="Ya está en este día">✓</span>` : "";
   let body = "";
@@ -1354,13 +1567,13 @@ function setSync(state, text) {
 }
 const monthOf = id => id === "rutina" ? "rutina" : ((String(id).match(/(\d{4}-\d{2})-\d{2}/) || [])[1] || "otros");
 const clean = v => JSON.parse(JSON.stringify(v));
-function allDocs() { return { ...logs, ...weights, ...meds, ...(rutina ? { rutina } : {}) }; }
+function allDocs() { return { ...logs, ...weights, ...meds, ...(rutina ? { rutina } : {}), ...(perfil ? { perfil } : {}) }; }
 function route(map) {
-  const L = {}, W = {}, M = {}; let R = null;
+  const L = {}, W = {}, M = {}; let R = null, P = null;
   Object.entries(map).forEach(([k, v]) => {
-    if (v && v.tipo === "rutina") R = v; else if (v && v.ex) L[k] = v;
+    if (v && v.tipo === "perfil") P = v; else if (v && v.tipo === "rutina") R = v; else if (v && v.ex) L[k] = v;
     else if (v && typeof v.peso === "number") W[k] = v; else if (v && v.tipo === "medidas") M[k] = v; });
-  logs = L; weights = W; meds = M; rutina = R; lsSave(); applyRutina();
+  logs = L; weights = W; meds = M; rutina = R; perfil = P; lsSave(); applyRutina();
 }
 function fbRef(id) { return FB.doc(fbDb, "users", fbUser.uid, "data", monthOf(id)); }
 function fbWrite(id, data) {
@@ -1370,7 +1583,7 @@ function fbWrite(id, data) {
 function fbDelete(id) { FB.updateDoc(fbRef(id), new FB.FieldPath("e", id), FB.deleteField()).catch(() => {}); }
 function fbFail(e) { fbErr = e && e.code || "error"; showState(false); }
 function showState(pending) {
-  if (!fbUser) { setSync("off", "Entra con tu cuenta de Google para guardar tus registros en la nube y verlos en cualquier teléfono."); return; }
+  if (!fbUser) { setSync("off", "Entra con Google para guardar tus registros en la nube y verlos en cualquier teléfono."); return; }
   if (fbErr === "permission-denied") { setSync("error", "La nube rechazó el guardado. Lo registrado sigue en el teléfono; avísale a quien administra la app."); return; }
   if (!navigator.onLine) { setSync("offline", pending ? "Sin internet. Tus cambios están en el teléfono y se subirán solos al volver la conexión." : "Sin internet. Puedes registrar normal: se sube al volver la conexión."); return; }
   if (pending) { setSync("busy", "Guardando en la nube…"); return; }
@@ -1393,6 +1606,8 @@ function listen() {
     }
     route(remote); render();
     showState(snap.metadata.hasPendingWrites);
+    // cuenta nueva sin rutina ni registros: hace las 5 preguntas una vez
+    if (!snap.metadata.fromCache) maybeOnboard();
   }, e => fbFail(e));
 }
 async function loadFb() {
@@ -1435,7 +1650,7 @@ async function login() {
 async function logout() {
   if (!await askConfirm("¿Salir de tu cuenta en este teléfono?<br><span class=\"note\">Tus registros quedan guardados en la nube y vuelven al entrar de nuevo.</span>", "Sí, salir", false)) return;
   try { await FB.signOut(fbAuth); } catch (e) {}
-  logs = {}; weights = {}; meds = {}; rutina = null; lsSave(); applyRutina(); render();
+  logs = {}; weights = {}; meds = {}; rutina = null; perfil = null; perfilAsked = false; lsSave(); applyRutina(); render();
 }
 showState(false);
 if (fbEmail) setSync("busy", "Conectando…");

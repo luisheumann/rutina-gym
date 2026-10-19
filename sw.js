@@ -2,7 +2,7 @@
 // - La app (HTML, iconos): primero intenta la red para traer la versión nueva; si no hay internet, usa la copia guardada.
 // - Fotos de ejercicios y tipografías: se guardan la primera vez y luego se leen del teléfono.
 // - Google (inicio de sesión y Drive): nunca se guarda, siempre va directo.
-const APP = "rg-app-v5", IMGS = "rg-img-v1";
+const APP = "rg-app-v6", IMGS = "rg-img-v1";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "logo.png", "fb.js"];
 
 self.addEventListener("install", (e) => {
