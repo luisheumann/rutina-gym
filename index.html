@@ -256,6 +256,34 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .tabs button svg{width:22px;height:22px}
 .tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .pickbar{top:6px}
+.pathcard{width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;color:var(--ink);font:inherit;text-transform:none;letter-spacing:0}
+.pc-top{display:flex;align-items:baseline;gap:8px}
+.pc-top b{font-family:var(--display);font-weight:900;font-size:24px;text-transform:uppercase;line-height:1}
+.pc-lvl{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
+.pc-fire{margin-left:auto;display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:14px;font-weight:600}
+.pc-fire svg,.rf svg,.novedad svg{width:18px;height:18px;fill:var(--accent);flex:none}
+.pc-week{display:flex;gap:5px;align-items:center}
+.pc-week .wd{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--hold-soft);color:var(--muted)}
+.pc-week .wd.on{background:var(--accent);color:var(--accent-ink)}
+.pc-week .wd.hoy{box-shadow:0 0 0 2px var(--ink) inset}
+.pc-cnt{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.pc-bar{height:6px;border-radius:999px;background:var(--hold-soft);overflow:hidden}.pc-bar span{display:block;height:100%;background:var(--accent);border-radius:999px}
+.pc-note{font-size:13px;color:var(--muted)}.pc-note b{color:var(--ink)}
+.camino{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.camino li{display:flex;align-items:center;gap:12px;color:var(--muted)}
+.camino li span:last-child{display:flex;flex-direction:column}.camino small{font-size:12px}
+.camino .nodo{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--hold-soft);flex:none}
+.camino li.ok{color:var(--ink)}.camino li.ok .nodo{background:var(--accent-soft);color:var(--accent)}
+.camino li.cur{color:var(--ink)}.camino li.cur .nodo{background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 4px var(--accent-soft)}
+.levelup{text-align:center;align-items:center}.levelup .big svg{width:64px;height:64px;fill:var(--accent)}
+.novedad{display:flex;align-items:center;gap:8px;background:var(--accent-soft);border:1px solid #4A2A12;border-radius:14px;padding:8px 12px;font-size:13.5px}
+.novedad span{flex:1}.novedad button{border:0;background:none;color:var(--muted);font-size:16px;padding:4px}
+.ranking{display:flex;flex-direction:column}
+.rk{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.rk .pos{width:22px;text-align:center;font-family:var(--mono);color:var(--muted)}
+.rk .nm{flex:1;display:flex;flex-direction:column;font-weight:700}.rk small{font-weight:500;color:var(--muted);font-size:12px}
+.rk.yo .nm{color:var(--accent)}
+.rf{display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:13px}
 .fsel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .fsel select{appearance:none;-webkit-appearance:none;font-size:13.5px;padding:8px 24px 8px 10px;border-radius:999px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;
   background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23A3A3A3' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center}
@@ -386,6 +414,7 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
       <div class="lbl">Primera vez → última vez</div>
       <div id="plist"></div>
     </div>
+    <div class="panel" id="comunidad"></div>
     <div class="panel" id="perfilbox"></div>
     <div class="panel">
       <div class="lbl">Tus datos</div>
@@ -401,7 +430,8 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   </section>
 
   <div id="v-train" class="wrap" style="gap:14px">
-  <div id="streak" class="streak"></div>
+  <div id="novedades"></div>
+  <div id="streak"></div>
   <section class="cal" aria-label="Calendario">
     <div class="calhead">
       <button class="navb" id="prev" aria-label="Mes anterior">‹</button>
@@ -735,12 +765,91 @@ function recordsOn(dateStr){
   });
   return out;
 }
+/* ---------- camino de niveles (racha semanal tipo Duolingo) y comunidad ---------- */
+// Cada semana (lunes a domingo) en que entrenas los días de tu rutina cuenta como "semana cumplida".
+// El nivel sube con las semanas cumplidas en total y nunca baja; la racha semanal se reinicia si fallas una semana.
+const NIVELES = [["Recién llegado",0],["Calentando",1],["Constante",2],["Fajado",4],["Duro",6],["Papeado",8],["Tanque",12],["Bestia",16],["Leyenda",24],["Rock Star",36]];
+const FIRE = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 3.5-1.5 5-3 7.5-1.4 2.5-1 4.5.5 6C9 13.5 10.5 12 12 11c0 3 2.5 3.5 2.5 6.5 0 2-1 3.5-2.5 3.5-3.5 0-6-2.5-6-6C6 11 12 8 12 2z"/></svg>`;
+let comunidad = [], eventos = [], miUid = null, miApodo = "";
+try { miApodo = localStorage.getItem("gymapodo") || ""; } catch (e) {}
+function semanasInfo(){
+  const meta = Math.max(1, Object.keys(PLAN).length || 3), done = [...trainedDates()].sort(), cur = weekStart(today);
+  const enSemana = ws => { const we = iso(new Date(new Date(ws + "T00:00").getTime() + 6 * 864e5)); return done.filter(d => d >= ws && d <= we).length; };
+  let semanas = 0, racha = 0, mejor = 0;
+  if(done.length){
+    for(let w = new Date(weekStart(new Date(done[0] + "T00:00")) + "T00:00"); iso(w) < cur; w = new Date(w.getTime() + 7 * 864e5)){
+      if(enSemana(iso(w)) >= meta){ semanas++; racha++; mejor = Math.max(mejor, racha); } else racha = 0;
+    }
+  }
+  const actual = done.filter(d => d >= cur && d <= iso(today)).length;
+  if(actual >= meta){ semanas++; racha++; mejor = Math.max(mejor, racha); }  // la semana en curso cuenta apenas se cumple
+  let nivel = 0; NIVELES.forEach(([, req], i) => { if(semanas >= req) nivel = i; });
+  return {meta, semanas, racha, mejor, actual, nivel, cur};
+}
 function updateStreak(){
   const el = document.getElementById("streak"); if(!el) return;
-  const s = streakInfo();
-  el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 3.5-1.5 5-3 7.5-1.4 2.5-1 4.500.5 6C9 13.500 10.500 12 12 11c0 3 2.500 3.500 2.500 6.500 0 2-1 3.500-2.500 3.500-3.500 0-6-2.500-6-6C6 11 12 8 12 2z"/></svg>
-    <span>${s.cur ? `Racha de <b>${s.cur}</b> ${s.cur===1?"día":"días"}` : "Empieza tu racha hoy"}${s.best>1 ? ` · mejor <b>${s.best}</b>` : ""}</span>`;
-  el.title = "Cuenta los días que entrenas seguidos. Los días de descanso de tu rutina no la rompen.";
+  const s = semanasInfo(), d = streakInfo(), [nom] = NIVELES[s.nivel], sig = NIVELES[s.nivel + 1];
+  const ws = new Date(s.cur + "T00:00"), done = trainedDates();
+  const dots = ["L","M","X","J","V","S","D"].map((l, i) => { const k = iso(new Date(ws.getTime() + i * 864e5));
+    return `<span class="wd${done.has(k) ? " on" : ""}${k === iso(today) ? " hoy" : ""}">${l}</span>`; }).join("");
+  const falta = sig ? sig[1] - s.semanas : 0;
+  el.innerHTML = `<button class="pathcard" type="button" id="path-open" aria-label="Ver el camino de niveles">
+    <div class="pc-top"><span class="pc-lvl">Nivel ${s.nivel + 1}</span><b>${esc(nom)}</b>
+      <span class="pc-fire">${FIRE}${s.racha} ${s.racha === 1 ? "semana" : "semanas"}</span></div>
+    <div class="pc-week">${dots}<span class="pc-cnt">${Math.min(s.actual, s.meta)}/${s.meta}</span></div>
+    <div class="pc-bar"><span style="width:${Math.min(s.actual / s.meta, 1) * 100}%"></span></div>
+    <div class="pc-note">${s.actual >= s.meta ? "Semana cumplida. " : `Esta semana: ${s.actual} de ${s.meta} entrenos. `}${sig ? `Te ${falta === 1 ? "falta 1 semana cumplida" : `faltan ${falta} semanas cumplidas`} para <b>${esc(sig[0])}</b>.` : "Llegaste al nivel máximo."}${d.cur > 1 ? ` · ${d.cur} días seguidos` : ""}</div>
+  </button>`;
+  document.getElementById("path-open").onclick = openCamino;
+  revisarNivel(s);
+}
+function openCamino(){
+  const s = semanasInfo();
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="dlg share" role="dialog" aria-modal="true" aria-label="Camino de niveles">
+    <h2 style="margin:0">Tu camino</h2>
+    <p class="note" style="margin:0">Cumple tus ${s.meta} entrenos de la semana (de lunes a domingo) y suma una semana. El nivel nunca baja; la racha se reinicia si fallas una semana.</p>
+    <ol class="camino">${NIVELES.map(([n, req], i) => `<li class="${i < s.nivel ? "ok" : i === s.nivel ? "cur" : ""}"><span class="nodo">${i < s.nivel ? "✓" : i + 1}</span>
+      <span><b>${esc(n)}</b><small>${req === 0 ? "Al empezar" : `${req} ${req === 1 ? "semana cumplida" : "semanas cumplidas"}`}</small></span></li>`).reverse().join("")}</ol>
+    <p class="note" style="margin:0">Llevas ${s.semanas} ${s.semanas === 1 ? "semana cumplida" : "semanas cumplidas"} · mejor racha: ${s.mejor}.</p>
+    <div class="actions"><button class="btn pri" type="button" data-no>Cerrar</button></div></div>`;
+  m.querySelector("[data-no]").onclick = () => m.remove(); m.onclick = e => { if(e.target === m) m.remove(); };
+  document.body.appendChild(m);
+}
+// al subir de nivel: celebración, aviso a la comunidad (si tienes apodo) y datos públicos al día
+function revisarNivel(s){
+  const key = "gymlvl_" + (miUid || "local");
+  let prev = null; try { prev = localStorage.getItem(key); } catch (e) {}
+  try { localStorage.setItem(key, String(s.nivel)); } catch (e) {}
+  if(prev !== null && s.nivel > +prev){
+    window.eventAdd?.({tipo:"nivel", nivel: s.nivel, nombre: NIVELES[s.nivel][0]});
+    const m = document.createElement("div"); m.className = "modal";
+    m.innerHTML = `<div class="dlg levelup" role="dialog" aria-modal="true"><div class="big">${FIRE}</div><h2 style="margin:0">¡Subiste a ${esc(NIVELES[s.nivel][0])}!</h2>
+      <p class="note" style="margin:0">Nivel ${s.nivel + 1} · ${s.semanas} semanas cumplidas.${NIVELES[s.nivel + 1] ? ` Ahora vas por ${esc(NIVELES[s.nivel + 1][0])}.` : ""}${miApodo ? " La comunidad ya lo sabe." : " Ponte un apodo en la nube para que la comunidad lo vea."}</p>
+      <div class="actions"><button class="btn pri" type="button" data-no>Seguir</button></div></div>`;
+    m.querySelector("[data-no]").onclick = () => m.remove(); document.body.appendChild(m);
+  }
+  window.pubSync?.({nivel: s.nivel, nombre: NIVELES[s.nivel][0], semanas: s.semanas, racha: s.racha});
+}
+const hace = ts => { const m = Math.round((Date.now() - ts) / 60000); return m < 60 ? `hace ${Math.max(m, 1)} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} d`; };
+function renderSocial(){
+  // aviso de logros nuevos de otras personas
+  let seen = 0; try { seen = +(localStorage.getItem("gymseen") || 0); } catch (e) {}
+  const nuevos = eventos.filter(e => e.uid !== miUid && e.ts > seen);
+  const nb = document.getElementById("novedades");
+  if(nb){
+    nb.innerHTML = nuevos.length ? `<div class="novedad">${FIRE}<span><b>${esc(nuevos[0].apodo)}</b> subió a <b>${esc(nuevos[0].nombre)}</b>${nuevos.length > 1 ? ` y ${nuevos.length - 1} logro${nuevos.length > 2 ? "s" : ""} más` : ""} · ${hace(nuevos[0].ts)}</span><button type="button" aria-label="Cerrar aviso" id="nov-x">✕</button></div>` : "";
+    const x = document.getElementById("nov-x"); if(x) x.onclick = () => { try { localStorage.setItem("gymseen", String(Math.max(...eventos.map(e => e.ts)))); } catch (e) {} renderSocial(); };
+  }
+  const box = document.getElementById("comunidad"); if(!box) return;
+  if(!miUid){ box.innerHTML = `<div class="lbl">Comunidad</div><p class="note">Entra con Google para ver el nivel y la racha de los demás.</p>`; return; }
+  const lista = comunidad.filter(c => c.apodo).sort((a, b) => b.semanas - a.semanas || b.racha - a.racha);
+  box.innerHTML = `<div class="lbl">Comunidad</div>
+    ${miApodo ? "" : `<p class="note">Aún no tienes apodo, así que nadie te ve. Toca la nube de arriba para elegir uno.</p>`}
+    ${lista.length ? `<div class="ranking">${lista.slice(0, 30).map((c, i) => `<div class="rk${c.uid === miUid ? " yo" : ""}"><span class="pos">${i + 1}</span><span class="nm">${esc(c.apodo)}<small>${esc(c.nombre || NIVELES[c.nivel || 0][0])} · nivel ${(c.nivel || 0) + 1}</small></span><span class="rf">${FIRE}${c.racha || 0}</span></div>`).join("")}</div>`
+      : `<p class="note">Todavía no hay nadie con apodo.</p>`}
+    ${eventos.length ? `<div class="lbl" style="margin-top:8px">Últimos logros</div>${eventos.slice(0, 8).map(e => `<div class="exline"><span><b>${esc(e.apodo)}</b> subió a ${esc(e.nombre)}</span><span class="d">${hace(e.ts)}</span></div>`).join("")}` : ""}
+    <p class="note">Solo se comparte el apodo, el nivel y la racha. Nunca pesos ni medidas.</p>`;
 }
 function shareInfo(key){
   const d = new Date(key+"T00:00:00"), wd = d.getDay(), p = PLAN[wd];
@@ -849,7 +958,7 @@ function renderProg(){
   document.getElementById("s-ses").textContent = dates.length;
   document.getElementById("s-week").textContent = dates.filter(d => d >= ws && d <= iso(today)).length + "/" + Object.keys(PLAN).length;
   document.getElementById("s-up").textContent = upN;
-  renderWeight(); renderPerfilBox();
+  renderWeight(); renderPerfilBox(); renderSocial();
   const pick = document.getElementById("pick");
   if(!ex.length){
     pick.innerHTML = `<option>Sin registros todavía</option>`; pick.disabled = true;
@@ -1588,8 +1697,11 @@ function setSync(state, text) {
 cloudBtn.onclick = () => {
   const m = document.createElement("div"); m.className = "modal";
   m.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-label="Tu cuenta"><p><b>${fbUser?.email || ""}</b></p><p class="note">${syncText}</p>
-    <div class="actions"><button class="btn sec" type="button" data-out>Salir de la cuenta</button><button class="btn pri" type="button" data-no>Cerrar</button></div></div>`;
-  m.querySelector("[data-no]").onclick = () => m.remove();
+    <label class="lbl" for="apodo-in">Tu apodo en la comunidad</label>
+    <input id="apodo-in" class="search" maxlength="20" autocomplete="off" placeholder="Sin apodo: nadie te ve" value="${(miApodo || "").replace(/"/g, "&quot;")}">
+    <p class="note" style="margin:0">Los demás solo ven tu apodo, tu nivel y tu racha. Déjalo vacío para no aparecer.</p>
+    <div class="actions"><button class="btn sec" type="button" data-out>Salir de la cuenta</button><button class="btn pri" type="button" data-no>Guardar</button></div></div>`;
+  m.querySelector("[data-no]").onclick = () => { setApodo(m.querySelector("#apodo-in").value); m.remove(); };
   m.onclick = e => { if (e.target === m) m.remove(); };
   m.querySelector("[data-out]").onclick = () => { m.remove(); logout(); };
   document.body.appendChild(m);
@@ -1617,6 +1729,39 @@ function showState(pending) {
   if (!navigator.onLine) { setSync("offline", pending ? "Sin internet · tus cambios se subirán solos al volver la conexión." : "Sin internet · puedes registrar normal, se sube al volver la conexión."); return; }
   if (pending) { setSync("busy", "Guardando en la nube…"); return; }
   setSync("on", "Todo está guardado en la nube.");
+}
+/* ---- comunidad: publico/{uid} = {apodo, nivel, nombre, semanas, racha}; eventos = logros ---- */
+let socUnsub = [], lastPub = "";
+function listenSocial() {
+  socUnsub.forEach(u => u()); socUnsub = [];
+  socUnsub.push(FB.onSnapshot(FB.query(FB.collection(fbDb, "publico"), FB.orderBy("semanas", "desc"), FB.limit(50)), snap => {
+    comunidad = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    const yo = comunidad.find(c => c.uid === miUid); if (yo && yo.apodo && !miApodo) { miApodo = yo.apodo; try { localStorage.setItem("gymapodo", miApodo); } catch (e) {} }
+    renderSocial();
+  }, () => {}));
+  socUnsub.push(FB.onSnapshot(FB.query(FB.collection(fbDb, "eventos"), FB.orderBy("ts", "desc"), FB.limit(20)), snap => {
+    eventos = snap.docs.map(d => d.data()).filter(e => e && e.apodo && e.ts); renderSocial();
+  }, () => {}));
+}
+let pubData = null;
+window.pubSync = (data, force) => {
+  pubData = data;
+  if (!fbUser || !miApodo) return;
+  const key = JSON.stringify({ ...data, apodo: miApodo });
+  if (!force && key === lastPub) return; lastPub = key;
+  FB.setDoc(FB.doc(fbDb, "publico", fbUser.uid), { ...data, apodo: miApodo, ts: Date.now() }).catch(() => { lastPub = ""; });
+};
+window.eventAdd = ev => {
+  if (!fbUser || !miApodo) return;
+  FB.addDoc(FB.collection(fbDb, "eventos"), { ...ev, uid: fbUser.uid, apodo: miApodo, ts: Date.now() }).catch(() => {});
+};
+function setApodo(v) {
+  v = String(v || "").trim().slice(0, 20); if (v === miApodo) return;
+  miApodo = v; try { localStorage.setItem("gymapodo", v); } catch (e) {}
+  if (!fbUser) return;
+  if (!v) { FB.deleteDoc(FB.doc(fbDb, "publico", fbUser.uid)).catch(() => {}); lastPub = ""; }
+  else window.pubSync(pubData || (() => { const s = semanasInfo(); return { nivel: s.nivel, nombre: NIVELES[s.nivel][0], semanas: s.semanas, racha: s.racha }; })(), true);
+  renderSocial();
 }
 let migKey = "";
 function listen() {
@@ -1653,9 +1798,9 @@ async function loadFb() {
       fbEmail = u.email || ""; try { localStorage.setItem("gymfbemail", fbEmail); } catch (e) {}
       col = { doc: id => ({ set: async data => { fbWrite(id, data); return true; }, delete: async () => { fbDelete(id); return true; } }) };
       storeNote.textContent = "Tus registros se guardan en la nube con tu cuenta de Google y también en este teléfono para usar la app sin internet.";
-      showState(false); listen();
+      miUid = u.uid; showState(false); listen(); listenSocial(); render();
     } else {
-      col = null; if (fbUnsub) { fbUnsub(); fbUnsub = null; }
+      col = null; miUid = null; comunidad = []; eventos = []; socUnsub.forEach(f => f()); socUnsub = []; if (fbUnsub) { fbUnsub(); fbUnsub = null; }
       storeNote.textContent = "Mientras no entres con Google, lo que registres queda guardado solo en este teléfono.";
       showState(false);
     }
@@ -1679,7 +1824,7 @@ async function login() {
 async function logout() {
   if (!await askConfirm("¿Salir de tu cuenta en este teléfono?<br><span class=\"note\">Tus registros quedan guardados en la nube y vuelven al entrar de nuevo.</span>", "Sí, salir", false)) return;
   try { await FB.signOut(fbAuth); } catch (e) {}
-  logs = {}; weights = {}; meds = {}; rutina = null; perfil = null; perfilAsked = false; lsSave(); applyRutina(); render();
+  logs = {}; weights = {}; meds = {}; rutina = null; perfil = null; perfilAsked = false; miApodo = ""; lastPub = ""; try { localStorage.removeItem("gymapodo"); } catch (e) {} lsSave(); applyRutina(); render();
 }
 showState(false);
 if (fbEmail) setSync("busy", "Conectando…");
