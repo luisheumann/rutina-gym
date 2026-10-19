@@ -370,7 +370,7 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
     </div>
     <div class="panel">
       <div class="lbl">Tus datos</div>
-      <p class="note">Se guardan en tu Google Drive en el archivo "Rutina Gym - Datos.json". <a id="sheetlink" target="_blank" rel="noopener" hidden>Ver archivo en Drive</a></p>
+      <p class="note">Se guardan en la nube con tu cuenta de Google. Solo tú puedes verlos.</p>
       <p class="note">Descarga tus registros cada cierto tiempo. El archivo CSV se abre en Excel o Google Sheets; con el archivo JSON puedes restaurar todo aquí si algún día hace falta.</p>
       <div class="actions">
         <button class="btn pri" id="dl-csv" type="button">Descargar CSV</button>
@@ -1329,149 +1329,120 @@ document.getElementById("restore").onchange = async ev => {
   ev.target.value = "";
 };
 
-/* ---------- Google Drive: inicio de sesión y sincronización ---------- */
-const CLIENT_ID = "953161091382-abt3reau4hcaupq9eo0cu56qg999i70q.apps.googleusercontent.com";
-const SCOPE = "https://www.googleapis.com/auth/drive.file";
-const FILE_NAME = "Rutina Gym - Datos.json";
-let gToken = null, gTokenExp = 0, gFileId = null, gFileLink = "", gEmailHint = "";
-let deletedIds = {}; let dirty = false; let pushTimer = null; let syncing = false;
-try { deletedIds = JSON.parse(localStorage.getItem("gymdeleted") || "{}"); dirty = localStorage.getItem("gymdirty") === "1";
-      const t = JSON.parse(localStorage.getItem("gymtoken") || "null"); if (t && t.exp > Date.now() + 60000) { gToken = t.tok; gTokenExp = t.exp; }
-      gFileId = localStorage.getItem("gymfileid"); gFileLink = localStorage.getItem("gymfilelink") || ""; gEmailHint = localStorage.getItem("gymemail") || ""; } catch (e) {}
-function saveSyncState() { try {
-  localStorage.setItem("gymdeleted", JSON.stringify(deletedIds)); localStorage.setItem("gymdirty", dirty ? "1" : "0");
-  localStorage.setItem("gymtoken", JSON.stringify(gToken ? { tok: gToken, exp: gTokenExp } : null));
-  if (gFileId) localStorage.setItem("gymfileid", gFileId); if (gFileLink) localStorage.setItem("gymfilelink", gFileLink);
-  if (gEmailHint) localStorage.setItem("gymemail", gEmailHint);
-} catch (e) {} }
+/* ---------- Firebase: entrar con Google y guardar en la nube ---------- */
+// Cada persona guarda sus datos en users/{uid}/data/{AAAA-MM | rutina}, campo "e" = {idRegistro: datos}.
+// Un documento por mes: abrir la app lee pocos documentos y el plan gratuito alcanza para cientos de usuarios.
+const FB_CONFIG = {
+  apiKey: "AIzaSyAF6oJT17RSek6tLblOaPsKi7koXaiwTFI",
+  authDomain: "mygym-62850.firebaseapp.com",
+  projectId: "mygym-62850",
+  storageBucket: "mygym-62850.firebasestorage.app",
+  messagingSenderId: "1079464772780",
+  appId: "1:1079464772780:web:eeaca3198a2d5ced55cb09"
+};
+let FB = null, fbAuth = null, fbDb = null, fbUser = null, fbUnsub = null, fbEmail = "", fbErr = "";
+try { fbEmail = localStorage.getItem("gymfbemail") || ""; } catch (e) {}
 
 const syncBox = document.getElementById("sync");
 function setSync(state, text) {
   syncBox.dataset.state = state;
-  const btn = state === "off" || state === "expired" || state === "error"
-    ? `<button class="btn pri" id="sync-btn" type="button">${state === "off" ? "Conectar con Google Drive" : "Conectar de nuevo"}</button>` : "";
+  const btn = state === "off" ? `<button class="btn pri" id="sync-btn" type="button">Entrar con Google</button>`
+            : state === "on" || state === "offline" ? (fbUser ? `<button class="btn sec" id="sync-out" type="button">Salir</button>` : "") : "";
   syncBox.innerHTML = `<span class="sync-dot"></span><span class="sync-txt">${text}</span>${btn}`;
-  const b = document.getElementById("sync-btn"); if (b) b.onclick = () => connect(true);
-  const sl = document.getElementById("sheetlink"); if (sl && gFileLink) { sl.href = gFileLink; sl.hidden = false; }
+  const b = document.getElementById("sync-btn"); if (b) b.onclick = login;
+  const o = document.getElementById("sync-out"); if (o) o.onclick = logout;
 }
-
-function loadGis() {
-  return new Promise((res, rej) => {
-    if (window.google?.accounts?.oauth2) return res();
-    const s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true;
-    s.onload = () => res(); s.onerror = () => rej(new Error("gis")); document.head.appendChild(s);
-  });
-}
-let tokenClient = null, tokenWaiter = null;
-async function requestToken(interactive) {
-  await loadGis();
-  if (!tokenClient) tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID, scope: SCOPE,
-    callback: (r) => { const w = tokenWaiter; tokenWaiter = null; if (!w) return;
-      if (r && r.access_token) { gToken = r.access_token; gTokenExp = Date.now() + (r.expires_in || 3600) * 1000; saveSyncState(); w.res(gToken); }
-      else w.rej(new Error(r?.error || "token")); },
-    error_callback: (e) => { const w = tokenWaiter; tokenWaiter = null; if (w) w.rej(new Error(e?.type || "popup")); }
-  });
-  return new Promise((res, rej) => { tokenWaiter = { res, rej };
-    tokenClient.requestAccessToken({ prompt: interactive && !gEmailHint ? "consent" : "", hint: gEmailHint || undefined }); });
-}
-async function api(url, opts = {}) {
-  const r = await fetch(url, { ...opts, headers: { Authorization: "Bearer " + gToken, ...(opts.headers || {}) } });
-  if (r.status === 401) { gToken = null; saveSyncState(); throw Object.assign(new Error("401"), { auth: true }); }
-  if (!r.ok) throw new Error("http " + r.status);
-  return r;
-}
-async function findOrCreateFile() {
-  if (gFileId) {
-    try { const r = await api(`https://www.googleapis.com/drive/v3/files/${gFileId}?fields=id,trashed,webViewLink`); const j = await r.json();
-      if (!j.trashed) { gFileLink = j.webViewLink || gFileLink; return; } } catch (e) { if (e.auth) throw e; }
-    gFileId = null;
-  }
-  const q = encodeURIComponent(`name='${FILE_NAME}' and trashed=false`);
-  const r = await api(`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&fields=files(id,webViewLink)&orderBy=modifiedTime desc`);
-  const j = await r.json();
-  if (j.files && j.files.length) { gFileId = j.files[0].id; gFileLink = j.files[0].webViewLink || ""; saveSyncState(); return; }
-  const boundary = "rutinagym" + Date.now();
-  const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: FILE_NAME, mimeType: "application/json" })}\r\n` +
-               `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({ version: 1, logs: {} })}\r\n--${boundary}--`;
-  const c = await api("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
-    { method: "POST", headers: { "Content-Type": "multipart/related; boundary=" + boundary }, body });
-  const cj = await c.json(); gFileId = cj.id; gFileLink = cj.webViewLink || ""; saveSyncState();
-}
+const monthOf = id => id === "rutina" ? "rutina" : ((String(id).match(/(\d{4}-\d{2})-\d{2}/) || [])[1] || "otros");
+const clean = v => JSON.parse(JSON.stringify(v));
 function allDocs() { return { ...logs, ...weights, ...meds, ...(rutina ? { rutina } : {}) }; }
 function route(map) {
   const L = {}, W = {}, M = {}; let R = null;
-  Object.entries(map).forEach(([k, v]) => { if (deletedIds[k]) return;
-    if (v && v.tipo === "rutina") R = v; else if (v && v.ex) L[k] = v; else if (v && typeof v.peso === "number") W[k] = v; else if (v && v.tipo === "medidas") M[k] = v; });
-  logs = L; weights = W; meds = M; if (R) rutina = R; lsSave(); applyRutina();
+  Object.entries(map).forEach(([k, v]) => {
+    if (v && v.tipo === "rutina") R = v; else if (v && v.ex) L[k] = v;
+    else if (v && typeof v.peso === "number") W[k] = v; else if (v && v.tipo === "medidas") M[k] = v; });
+  logs = L; weights = W; meds = M; rutina = R; lsSave(); applyRutina();
 }
-async function pullAndMerge() {
-  const r = await api(`https://www.googleapis.com/drive/v3/files/${gFileId}?alt=media`);
-  let remote = {}; try { remote = (await r.json()).logs || {}; } catch (e) {}
-  const local = allDocs(), merged = { ...remote };
-  let changed = false;
-  for (const [k, v] of Object.entries(local)) { const rv = merged[k]; if (!rv || (v.ts || 0) > (rv.ts || 0)) { merged[k] = v; changed = true; } }
-  for (const k of Object.keys(deletedIds)) if (merged[k]) { delete merged[k]; changed = true; }
-  route(merged);
-  if (changed || dirty) await pushNow();
-  deletedIds = {}; saveSyncState();
+function fbRef(id) { return FB.doc(fbDb, "users", fbUser.uid, "data", monthOf(id)); }
+function fbWrite(id, data) {
+  // sin await: sin internet la escritura queda en cola en el teléfono y sube sola al volver la conexión
+  FB.setDoc(fbRef(id), { e: { [id]: clean(data) } }, { mergeFields: [new FB.FieldPath("e", id)] }).catch(fbFail);
 }
-async function pushNow() {
-  if (!gToken || !gFileId) { dirty = true; saveSyncState(); return; }
-  await api(`https://www.googleapis.com/upload/drive/v3/files/${gFileId}?uploadType=media`,
-    { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: 1, actualizado: new Date().toISOString(), logs: allDocs() }) });
-  dirty = false; saveSyncState();
+function fbDelete(id) { FB.updateDoc(fbRef(id), new FB.FieldPath("e", id), FB.deleteField()).catch(() => {}); }
+function fbFail(e) { fbErr = e && e.code || "error"; showState(false); }
+function showState(pending) {
+  if (!fbUser) { setSync("off", "Entra con tu cuenta de Google para guardar tus registros en la nube y verlos en cualquier teléfono."); return; }
+  if (fbErr === "permission-denied") { setSync("error", "La nube rechazó el guardado. Lo registrado sigue en el teléfono; avísale a quien administra la app."); return; }
+  if (!navigator.onLine) { setSync("offline", pending ? "Sin internet. Tus cambios están en el teléfono y se subirán solos al volver la conexión." : "Sin internet. Puedes registrar normal: se sube al volver la conexión."); return; }
+  if (pending) { setSync("busy", "Guardando en la nube…"); return; }
+  setSync("on", `Guardado en la nube · ${fbUser.email || ""}`);
 }
-function offlineMsg() {
-  setSync("offline", dirty ? "Sin internet. Tus cambios están guardados en el teléfono y se subirán a tu Drive al volver la conexión."
-                           : "Sin internet. Puedes registrar normal: se guarda en el teléfono y se sube al volver la conexión.");
+let migKey = "";
+function listen() {
+  if (fbUnsub) fbUnsub();
+  const uid = fbUser.uid; migKey = "gymfbmig_" + uid;
+  let migrated = false; try { migrated = localStorage.getItem(migKey) === "1"; } catch (e) {}
+  fbUnsub = FB.onSnapshot(FB.collection(fbDb, "users", uid, "data"), { includeMetadataChanges: true }, snap => {
+    const remote = {}; snap.docs.forEach(d => Object.assign(remote, d.data().e || {}));
+    if (!migrated) {
+      // primera vez en este teléfono: espera la respuesta del servidor y sube lo que solo existe aquí (incluye lo traído de Drive)
+      if (snap.metadata.fromCache) return;
+      const local = allDocs(); let n = 0;
+      Object.entries(local).forEach(([k, v]) => { const r = remote[k]; if (!r || (v.ts || 0) > (r.ts || 0)) { remote[k] = v; fbWrite(k, v); n++; } });
+      migrated = true; try { localStorage.setItem(migKey, "1"); } catch (e) {}
+      if (n) storeNote.textContent = `Se subieron a la nube ${n} registros que tenías en este teléfono.`;
+    }
+    route(remote); render();
+    showState(snap.metadata.hasPendingWrites);
+  }, e => fbFail(e));
 }
-function schedulePush() {
-  dirty = true; saveSyncState();
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(async () => {
-    if (!navigator.onLine) { offlineMsg(); return; }
-    if (!gToken || Date.now() > gTokenExp - 30000) { setSync(gEmailHint ? "expired" : "off", "Guardado en el teléfono. Toca para subirlo a tu Drive."); return; }
-    try { setSync("busy", "Guardando en tu Drive…"); await pushNow(); setSync("on", "Guardado en tu Google Drive"); }
-    catch (e) { setSync(e.auth ? "expired" : "error", e.auth ? "Sesión vencida. Lo guardado sigue en el teléfono." : "Sin conexión. Lo guardado sigue en el teléfono."); }
-  }, 700);
+async function loadFb() {
+  if (FB) return FB;
+  FB = await import("./fb.js");
+  const app = FB.initializeApp(FB_CONFIG);
+  fbAuth = FB.getAuth(app);
+  try { fbDb = FB.initializeFirestore(app, { localCache: FB.persistentLocalCache({ tabManager: FB.persistentSingleTabManager() }) }); }
+  catch (e) { fbDb = FB.initializeFirestore(app, {}); }
+  try { await FB.getRedirectResult(fbAuth); } catch (e) {}
+  FB.onAuthStateChanged(fbAuth, u => {
+    fbUser = u; fbErr = "";
+    if (u) {
+      fbEmail = u.email || ""; try { localStorage.setItem("gymfbemail", fbEmail); } catch (e) {}
+      col = { doc: id => ({ set: async data => { fbWrite(id, data); return true; }, delete: async () => { fbDelete(id); return true; } }) };
+      storeNote.textContent = "Tus registros se guardan en la nube con tu cuenta de Google y también en este teléfono para usar la app sin internet.";
+      showState(false); listen();
+    } else {
+      col = null; if (fbUnsub) { fbUnsub(); fbUnsub = null; }
+      storeNote.textContent = "Mientras no entres con Google, lo que registres queda guardado solo en este teléfono.";
+      showState(false);
+    }
+  });
+  return FB;
 }
-// la app llama a col.doc(id).set(data) / .delete() al guardar o borrar
-col = { doc: (id) => ({
-  set: async () => { delete deletedIds[id]; schedulePush(); return true; },
-  delete: async () => { deletedIds[id] = Date.now(); schedulePush(); return true; }
-}) };
-async function connect(interactive) {
-  if (syncing) return;
-  if (!navigator.onLine) { offlineMsg(); return; }
-  syncing = true;
+async function login() {
+  setSync("busy", "Abriendo Google…");
   try {
-    if (!gToken || Date.now() > gTokenExp - 60000) { setSync("busy", "Conectando con Google…"); await requestToken(interactive); }
-    setSync("busy", "Sincronizando con tu Drive…");
-    await findOrCreateFile(); await pullAndMerge();
-    try { const u = await (await api("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)")).json(); gEmailHint = u.user?.emailAddress || gEmailHint; saveSyncState(); } catch (e) {}
-    setSync("on", `Guardado en tu Google Drive${gEmailHint ? " · " + gEmailHint : ""}`);
-    storeNote.innerHTML = `Tus registros se guardan en tu Google Drive, en el archivo <b>${FILE_NAME}</b>.`;
-    render();
+    await loadFb();
+    const p = new FB.GoogleAuthProvider(); p.setCustomParameters({ prompt: "select_account" });
+    try { await FB.signInWithPopup(fbAuth, p); }
+    catch (e) { if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) await FB.signInWithRedirect(fbAuth, p); else throw e; }
   } catch (e) {
-    if (!navigator.onLine) { offlineMsg(); return; }
-    if (e.auth) { gToken = null; saveSyncState(); }
-    setSync(gEmailHint ? "expired" : "off", gEmailHint ? "Toca para conectar y sincronizar." : "Conecta tu cuenta de Google para guardar en tu Drive.");
-  } finally { syncing = false; }
+    const why = !navigator.onLine ? "Necesitas internet para entrar la primera vez."
+      : e && e.code === "auth/unauthorized-domain" ? "Este sitio aún no está autorizado en Firebase."
+      : e && e.code === "auth/popup-closed-by-user" ? "Cerraste la ventana de Google antes de terminar." : "No se pudo entrar con Google.";
+    setSync("off", why + " Intenta de nuevo.");
+  }
 }
-storeNote.textContent = "Mientras no conectes Google Drive, lo que registres queda guardado solo en este teléfono.";
-const tokenOk = () => gToken && Date.now() < gTokenExp - 60000;
-if (!navigator.onLine) offlineMsg();
-else if (gToken) connect(false);
-else setSync(gEmailHint ? "expired" : "off", gEmailHint ? "Toca para conectar y sincronizar." : "Conecta tu cuenta de Google para guardar en tu Drive.");
-// al volver internet: sincroniza solo si la sesión sigue activa; si venció, pide un toque
-window.addEventListener("online", () => {
-  if (tokenOk()) connect(false);
-  else if (gEmailHint) setSync("expired", dirty ? "Volvió el internet. Toca para subir tus cambios a tu Drive." : "Volvió el internet. Toca para sincronizar.");
-  else setSync("off", "Conecta tu cuenta de Google para guardar en tu Drive.");
-});
-window.addEventListener("offline", offlineMsg);
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && navigator.onLine && dirty && tokenOk()) connect(false); });
+async function logout() {
+  if (!await askConfirm("¿Salir de tu cuenta en este teléfono?<br><span class=\"note\">Tus registros quedan guardados en la nube y vuelven al entrar de nuevo.</span>", "Sí, salir", false)) return;
+  try { await FB.signOut(fbAuth); } catch (e) {}
+  logs = {}; weights = {}; meds = {}; rutina = null; lsSave(); applyRutina(); render();
+}
+showState(false);
+if (fbEmail) setSync("busy", "Conectando…");
+loadFb().catch(() => { if (!fbUser) setSync(navigator.onLine ? "off" : "offline", navigator.onLine ? "No se pudo cargar el inicio de sesión. Recarga la app." : "Sin internet. Puedes registrar normal: se guarda en el teléfono."); });
+window.addEventListener("online", () => showState(false));
+window.addEventListener("offline", () => showState(false));
+
 // guarda en el teléfono las fotos de los ejercicios de tu rutina para verlas sin internet
 function cacheRoutineImages() {
   if (!("caches" in window) || !navigator.onLine) return;
