@@ -445,10 +445,8 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   </div>
 
   <section class="foot">
-    <p><b>Cómo progresar:</b> trabaja cada serie a 1–2 repeticiones del fallo. Cuando completes todas las series en el tope del rango con buena técnica, la próxima vez sube el peso (la etiqueta naranja te lo indica). Si algo molesta en la zona lumbar, para ese ejercicio y consúltalo con tu médico o fisioterapeuta.</p>
-    <p class="note">En los ejercicios con barra, anota solo el peso de los discos de cada lado (sin contar la barra). Sin discos = 0.</p>
+    <p class="note">Entrena a 1–2 repeticiones del fallo. En barra, anota solo los discos de cada lado.</p>
     <p id="store" class="note"></p>
-    <p class="note">Imágenes: <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noopener">Free Exercise DB</a> (dominio público).</p>
   </section>
 </div>
 
@@ -1797,11 +1795,11 @@ async function loadFb() {
     if (u) {
       fbEmail = u.email || ""; try { localStorage.setItem("gymfbemail", fbEmail); } catch (e) {}
       col = { doc: id => ({ set: async data => { fbWrite(id, data); return true; }, delete: async () => { fbDelete(id); return true; } }) };
-      storeNote.textContent = "Tus registros se guardan en la nube con tu cuenta de Google y también en este teléfono para usar la app sin internet.";
+      storeNote.textContent = "";
       miUid = u.uid; showState(false); listen(); listenSocial(); render();
     } else {
       col = null; miUid = null; comunidad = []; eventos = []; socUnsub.forEach(f => f()); socUnsub = []; if (fbUnsub) { fbUnsub(); fbUnsub = null; }
-      storeNote.textContent = "Mientras no entres con Google, lo que registres queda guardado solo en este teléfono.";
+      storeNote.textContent = "";
       showState(false);
     }
   });
