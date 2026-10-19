@@ -283,6 +283,8 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .rk .pos{width:22px;text-align:center;font-family:var(--mono);color:var(--muted)}
 .rk .nm{flex:1;display:flex;flex-direction:column;font-weight:700}.rk small{font-weight:500;color:var(--muted);font-size:12px}
 .rk.yo .nm{color:var(--accent)}
+.rk .pts{font-weight:600;font-size:15px}
+.rk small svg.mini{width:12px;height:12px;fill:var(--accent);vertical-align:-1px}
 .rf{display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:13px}
 .fsel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .fsel select{appearance:none;-webkit-appearance:none;font-size:13.5px;padding:8px 24px 8px 10px;border-radius:999px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;
@@ -768,8 +770,30 @@ function recordsOn(dateStr){
 // El nivel sube con las semanas cumplidas en total y nunca baja; la racha semanal se reinicia si fallas una semana.
 const NIVELES = [["Recién llegado",0],["Calentando",1],["Constante",2],["Fajado",4],["Duro",6],["Papeado",8],["Tanque",12],["Bestia",16],["Leyenda",24],["Rock Star",36]];
 const FIRE = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 3.5-1.5 5-3 7.5-1.4 2.5-1 4.5.5 6C9 13.5 10.5 12 12 11c0 3 2.5 3.5 2.5 6.5 0 2-1 3.5-2.5 3.5-3.5 0-6-2.5-6-6C6 11 12 8 12 2z"/></svg>`;
-let comunidad = [], eventos = [], miUid = null, miApodo = "";
-try { miApodo = localStorage.getItem("gymapodo") || ""; } catch (e) {}
+let comunidad = [], eventos = [], miUid = null, miApodo = "", miPais = "", miGym = "", rkPeriodo = "mes", rkFiltro = "todos";
+try { miApodo = localStorage.getItem("gymapodo") || ""; miPais = localStorage.getItem("gympais") || ""; miGym = localStorage.getItem("gymgym") || ""; } catch (e) {}
+const PAISES = ["Venezuela","Colombia","México","Argentina","Chile","Perú","Ecuador","Panamá","República Dominicana","España","Estados Unidos","Otro"];
+const normGym = g => String(g || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+// Puntos: premian constancia y progreso propio (no cuánto peso levantas), con topes diarios.
+// +10 por día entrenado, +2 por ejercicio (máx. 8 al día), +15 por récord personal (máx. 3 al día),
+// +25 por semana cumplida y +5 por cada semana de racha en ese momento.
+const PTS = {dia:10, ej:2, ejMax:8, pr:15, prMax:3, semana:25, racha:5};
+function puntosInfo(){
+  const hoy = iso(today), curM = hoy.slice(0, 7), byDay = {};
+  Object.values(logs).forEach(l => { if(l.date <= hoy && EX[l.ex] && l.sets?.some(z => z.reps > 0)) (byDay[l.date] = byDay[l.date] || []).push(l); });
+  let total = 0, mes = 0; const add = (d, n) => { total += n; if(d.slice(0, 7) === curM) mes += n; };
+  Object.entries(byDay).forEach(([d, ls]) => add(d, PTS.dia + Math.min(ls.length, PTS.ejMax) * PTS.ej + Math.min(recordsOn(d).length, PTS.prMax) * PTS.pr));
+  const meta = Math.max(1, Object.keys(PLAN).length || 3), dias = Object.keys(byDay).sort();
+  if(dias.length){
+    let racha = 0;
+    for(let w = new Date(weekStart(new Date(dias[0] + "T00:00")) + "T00:00"); iso(w) <= hoy; w = new Date(w.getTime() + 7 * 864e5)){
+      const ws = iso(w), we = iso(new Date(w.getTime() + 6 * 864e5)), en = dias.filter(d => d >= ws && d <= we);
+      if(en.length >= meta){ racha++; add(en[meta - 1], PTS.semana + racha * PTS.racha); }
+      else if(we < hoy) racha = 0;
+    }
+  }
+  return {total, mes, curM};
+}
 function semanasInfo(){
   const meta = Math.max(1, Object.keys(PLAN).length || 3), done = [...trainedDates()].sort(), cur = weekStart(today);
   const enSemana = ws => { const we = iso(new Date(new Date(ws + "T00:00").getTime() + 6 * 864e5)); return done.filter(d => d >= ws && d <= we).length; };
@@ -796,7 +820,7 @@ function updateStreak(){
       <span class="pc-fire">${FIRE}${s.racha} ${s.racha === 1 ? "semana" : "semanas"}</span></div>
     <div class="pc-week">${dots}<span class="pc-cnt">${Math.min(s.actual, s.meta)}/${s.meta}</span></div>
     <div class="pc-bar"><span style="width:${Math.min(s.actual / s.meta, 1) * 100}%"></span></div>
-    <div class="pc-note">${s.actual >= s.meta ? "Semana cumplida. " : `Esta semana: ${s.actual} de ${s.meta} entrenos. `}${sig ? `Te ${falta === 1 ? "falta 1 semana cumplida" : `faltan ${falta} semanas cumplidas`} para <b>${esc(sig[0])}</b>.` : "Llegaste al nivel máximo."}${d.cur > 1 ? ` · ${d.cur} días seguidos` : ""}</div>
+    <div class="pc-note">${s.actual >= s.meta ? "Semana cumplida. " : `Esta semana: ${s.actual} de ${s.meta} entrenos. `}${sig ? `Te ${falta === 1 ? "falta 1 semana cumplida" : `faltan ${falta} semanas cumplidas`} para <b>${esc(sig[0])}</b>.` : "Llegaste al nivel máximo."}${d.cur > 1 ? ` · ${d.cur} días seguidos` : ""} · <b>${puntosInfo().mes.toLocaleString("es")} pts</b> este mes</div>
   </button>`;
   document.getElementById("path-open").onclick = openCamino;
   revisarNivel(s);
@@ -827,9 +851,13 @@ function revisarNivel(s){
       <div class="actions"><button class="btn pri" type="button" data-no>Seguir</button></div></div>`;
     m.querySelector("[data-no]").onclick = () => m.remove(); document.body.appendChild(m);
   }
-  window.pubSync?.({nivel: s.nivel, nombre: NIVELES[s.nivel][0], semanas: s.semanas, racha: s.racha});
+  window.pubSync?.(datosPublicos(s));
 }
 const hace = ts => { const m = Math.round((Date.now() - ts) / 60000); return m < 60 ? `hace ${Math.max(m, 1)} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} d`; };
+function datosPublicos(s){
+  s = s || semanasInfo(); const p = puntosInfo();
+  return {nivel: s.nivel, nombre: NIVELES[s.nivel][0], semanas: s.semanas, racha: s.racha, puntos: p.total, puntosMes: p.mes, mes: p.curM, pais: miPais, gym: miGym.trim(), gymKey: normGym(miGym)};
+}
 function renderSocial(){
   // aviso de logros nuevos de otras personas
   let seen = 0; try { seen = +(localStorage.getItem("gymseen") || 0); } catch (e) {}
@@ -841,13 +869,26 @@ function renderSocial(){
   }
   const box = document.getElementById("comunidad"); if(!box) return;
   if(!miUid){ box.innerHTML = `<div class="lbl">Comunidad</div><p class="note">Entra con Google para ver el nivel y la racha de los demás.</p>`; return; }
-  const lista = comunidad.filter(c => c.apodo).sort((a, b) => b.semanas - a.semanas || b.racha - a.racha);
-  box.innerHTML = `<div class="lbl">Comunidad</div>
+  const curM = iso(today).slice(0, 7), pts = c => rkPeriodo === "mes" ? (c.mes === curM ? c.puntosMes || 0 : 0) : (c.puntos || 0);
+  const lista = comunidad.filter(c => c.apodo)
+    .filter(c => rkFiltro === "pais" ? (miPais && c.pais === miPais) : rkFiltro === "gym" ? (miGym && c.gymKey === normGym(miGym)) : true)
+    .sort((a, b) => pts(b) - pts(a) || (b.racha || 0) - (a.racha || 0));
+  const yo = puntosInfo();
+  box.innerHTML = `<div class="lbl">Ranking</div>
+    <p style="margin:0">Tus puntos: <b class="mono">${(rkPeriodo === "mes" ? yo.mes : yo.total).toLocaleString("es")}</b> ${rkPeriodo === "mes" ? "este mes" : "en total"}</p>
+    <div class="seg" role="group" aria-label="Periodo"><button type="button" data-rp="mes" aria-pressed="${rkPeriodo === "mes"}">Este mes</button><button type="button" data-rp="total" aria-pressed="${rkPeriodo === "total"}">Total</button></div>
+    <div class="fsel" style="grid-template-columns:1fr"><select id="rk-f" aria-label="Filtrar ranking" class="${rkFiltro !== "todos" ? "on" : ""}">
+      <option value="todos"${rkFiltro === "todos" ? " selected" : ""}>Todos</option>
+      <option value="pais"${rkFiltro === "pais" ? " selected" : ""}${miPais ? "" : " disabled"}>Mi país${miPais ? ` (${esc(miPais)})` : " · elígelo en la nube"}</option>
+      <option value="gym"${rkFiltro === "gym" ? " selected" : ""}${miGym ? "" : " disabled"}>Mi gym${miGym ? ` (${esc(miGym)})` : " · escríbelo en la nube"}</option></select></div>
     ${miApodo ? "" : `<p class="note">Aún no tienes apodo, así que nadie te ve. Toca la nube de arriba para elegir uno.</p>`}
-    ${lista.length ? `<div class="ranking">${lista.slice(0, 30).map((c, i) => `<div class="rk${c.uid === miUid ? " yo" : ""}"><span class="pos">${i + 1}</span><span class="nm">${esc(c.apodo)}<small>${esc(c.nombre || NIVELES[c.nivel || 0][0])} · nivel ${(c.nivel || 0) + 1}</small></span><span class="rf">${FIRE}${c.racha || 0}</span></div>`).join("")}</div>`
-      : `<p class="note">Todavía no hay nadie con apodo.</p>`}
+    ${lista.length ? `<div class="ranking">${lista.slice(0, 30).map((c, i) => `<div class="rk${c.uid === miUid ? " yo" : ""}"><span class="pos">${i + 1}</span><span class="nm">${esc(c.apodo)}<small>${esc(c.nombre || NIVELES[c.nivel || 0][0])} · ${FIRE.replace("<svg", '<svg class="mini"')}${c.racha || 0}${c.gym ? " · " + esc(c.gym) : ""}</small></span><span class="pts mono">${pts(c).toLocaleString("es")}</span></div>`).join("")}</div>`
+      : `<p class="note">Nadie con apodo en este filtro todavía.</p>`}
+    <details class="reg"><summary>Cómo se ganan puntos</summary><p class="note" style="margin:6px 0 0">+${PTS.dia} por día entrenado · +${PTS.ej} por ejercicio (hasta ${PTS.ejMax} al día) · +${PTS.pr} por récord personal (hasta ${PTS.prMax} al día) · +${PTS.semana} por semana cumplida y +${PTS.racha} por cada semana de racha. El ranking del mes se reinicia el día 1.</p></details>
     ${eventos.length ? `<div class="lbl" style="margin-top:8px">Últimos logros</div>${eventos.slice(0, 8).map(e => `<div class="exline"><span><b>${esc(e.apodo)}</b> subió a ${esc(e.nombre)}</span><span class="d">${hace(e.ts)}</span></div>`).join("")}` : ""}
-    <p class="note">Solo se comparte el apodo, el nivel y la racha. Nunca pesos ni medidas.</p>`;
+    <p class="note">Solo se comparte apodo, nivel, racha, puntos, país y gym. Nunca pesos ni medidas.</p>`;
+  box.querySelectorAll("[data-rp]").forEach(b => b.onclick = () => { rkPeriodo = b.dataset.rp; renderSocial(); });
+  const rf = document.getElementById("rk-f"); if(rf) rf.onchange = () => { rkFiltro = rf.value; renderSocial(); };
 }
 function shareInfo(key){
   const d = new Date(key+"T00:00:00"), wd = d.getDay(), p = PLAN[wd];
@@ -1697,9 +1738,16 @@ cloudBtn.onclick = () => {
   m.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-label="Tu cuenta"><p><b>${fbUser?.email || ""}</b></p><p class="note">${syncText}</p>
     <label class="lbl" for="apodo-in">Tu apodo en la comunidad</label>
     <input id="apodo-in" class="search" maxlength="20" autocomplete="off" placeholder="Sin apodo: nadie te ve" value="${(miApodo || "").replace(/"/g, "&quot;")}">
-    <p class="note" style="margin:0">Los demás solo ven tu apodo, tu nivel y tu racha. Déjalo vacío para no aparecer.</p>
+    <label class="lbl" for="pais-in">País</label>
+    <select id="pais-in"><option value="">Sin indicar</option>${PAISES.map(p => `<option${p === miPais ? " selected" : ""}>${p}</option>`).join("")}</select>
+    <label class="lbl" for="gym-in">Tu gym</label>
+    <input id="gym-in" class="search" maxlength="40" autocomplete="off" placeholder="Ej.: Rock and Rolls" value="${(miGym || "").replace(/"/g, "&quot;")}">
+    <p class="note" style="margin:0">Los demás solo ven tu apodo, nivel, racha, puntos, país y gym. Deja el apodo vacío para no aparecer.</p>
     <div class="actions"><button class="btn sec" type="button" data-out>Salir de la cuenta</button><button class="btn pri" type="button" data-no>Guardar</button></div></div>`;
-  m.querySelector("[data-no]").onclick = () => { setApodo(m.querySelector("#apodo-in").value); m.remove(); };
+  m.querySelector("[data-no]").onclick = () => {
+    miPais = m.querySelector("#pais-in").value; miGym = m.querySelector("#gym-in").value.trim().slice(0, 40);
+    try { localStorage.setItem("gympais", miPais); localStorage.setItem("gymgym", miGym); } catch (e) {}
+    setApodo(m.querySelector("#apodo-in").value, true); m.remove(); };
   m.onclick = e => { if (e.target === m) m.remove(); };
   m.querySelector("[data-out]").onclick = () => { m.remove(); logout(); };
   document.body.appendChild(m);
@@ -1732,9 +1780,11 @@ function showState(pending) {
 let socUnsub = [], lastPub = "";
 function listenSocial() {
   socUnsub.forEach(u => u()); socUnsub = [];
-  socUnsub.push(FB.onSnapshot(FB.query(FB.collection(fbDb, "publico"), FB.orderBy("semanas", "desc"), FB.limit(50)), snap => {
+  socUnsub.push(FB.onSnapshot(FB.query(FB.collection(fbDb, "publico"), FB.orderBy("puntos", "desc"), FB.limit(50)), snap => {
     comunidad = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-    const yo = comunidad.find(c => c.uid === miUid); if (yo && yo.apodo && !miApodo) { miApodo = yo.apodo; try { localStorage.setItem("gymapodo", miApodo); } catch (e) {} }
+    const yo = comunidad.find(c => c.uid === miUid);
+    if (yo && yo.apodo && !miApodo) { miApodo = yo.apodo; miPais = miPais || yo.pais || ""; miGym = miGym || yo.gym || "";
+      try { localStorage.setItem("gymapodo", miApodo); localStorage.setItem("gympais", miPais); localStorage.setItem("gymgym", miGym); } catch (e) {} }
     renderSocial();
   }, () => {}));
   socUnsub.push(FB.onSnapshot(FB.query(FB.collection(fbDb, "eventos"), FB.orderBy("ts", "desc"), FB.limit(20)), snap => {
@@ -1753,12 +1803,12 @@ window.eventAdd = ev => {
   if (!fbUser || !miApodo) return;
   FB.addDoc(FB.collection(fbDb, "eventos"), { ...ev, uid: fbUser.uid, apodo: miApodo, ts: Date.now() }).catch(() => {});
 };
-function setApodo(v) {
-  v = String(v || "").trim().slice(0, 20); if (v === miApodo) return;
+function setApodo(v, otros) {
+  v = String(v || "").trim().slice(0, 20); if (v === miApodo && !otros) return;
   miApodo = v; try { localStorage.setItem("gymapodo", v); } catch (e) {}
   if (!fbUser) return;
   if (!v) { FB.deleteDoc(FB.doc(fbDb, "publico", fbUser.uid)).catch(() => {}); lastPub = ""; }
-  else window.pubSync(pubData || (() => { const s = semanasInfo(); return { nivel: s.nivel, nombre: NIVELES[s.nivel][0], semanas: s.semanas, racha: s.racha }; })(), true);
+  else window.pubSync(datosPublicos(), true);
   renderSocial();
 }
 let migKey = "";
@@ -1822,7 +1872,7 @@ async function login() {
 async function logout() {
   if (!await askConfirm("¿Salir de tu cuenta en este teléfono?<br><span class=\"note\">Tus registros quedan guardados en la nube y vuelven al entrar de nuevo.</span>", "Sí, salir", false)) return;
   try { await FB.signOut(fbAuth); } catch (e) {}
-  logs = {}; weights = {}; meds = {}; rutina = null; perfil = null; perfilAsked = false; miApodo = ""; lastPub = ""; try { localStorage.removeItem("gymapodo"); } catch (e) {} lsSave(); applyRutina(); render();
+  logs = {}; weights = {}; meds = {}; rutina = null; perfil = null; perfilAsked = false; miApodo = ""; miPais = ""; miGym = ""; lastPub = ""; try { ["gymapodo","gympais","gymgym"].forEach(k => localStorage.removeItem(k)); } catch (e) {} lsSave(); applyRutina(); render();
 }
 showState(false);
 if (fbEmail) setSync("busy", "Conectando…");
