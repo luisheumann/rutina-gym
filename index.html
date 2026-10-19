@@ -256,6 +256,11 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .tabs button svg{width:22px;height:22px}
 .tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .pickbar{top:6px}
+.fsel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.fsel select{appearance:none;-webkit-appearance:none;font-size:13.5px;padding:8px 24px 8px 10px;border-radius:999px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;
+  background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23A3A3A3' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center}
+.fsel select.on{border-color:var(--accent);color:var(--accent)}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font:inherit;text-decoration:underline}
 .rot{background:var(--accent-soft);border:1px solid #4A2A12;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .rot .lbl{color:var(--accent)}
 .pq{display:flex;flex-direction:column;gap:6px}
@@ -274,6 +279,16 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .sync[data-state="busy"] .sync-dot{background:var(--warn)}
 .sync[data-state="expired"] .sync-dot,.sync[data-state="error"] .sync-dot{background:var(--warn)}
 .sync[data-state="offline"] .sync-dot{background:var(--hold)}
+/* sincronizado o guardando: la barra se oculta y queda solo la nube del encabezado */
+.sync[data-state="on"],.sync[data-state="busy"]{display:none}
+.sync[data-state="offline"]{padding:6px 12px;font-size:12.5px}
+.cloud{margin-left:auto;flex:none;position:relative;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;padding:0}
+.cloud svg{width:22px;height:22px;fill:none;stroke:var(--muted);stroke-width:1.8}
+.cloud i{position:absolute;right:7px;bottom:8px;width:9px;height:9px;border-radius:50%;background:var(--muted);border:2px solid var(--card)}
+.cloud[data-state="on"] svg{stroke:var(--accent)} .cloud[data-state="on"] i{background:var(--accent)}
+.cloud[data-state="busy"] i{background:var(--warn)}
+.cloud[data-state="error"] i,.cloud[data-state="offline"] i{background:var(--hold)}
+@media (prefers-reduced-motion:no-preference){.cloud[data-state="busy"] i{animation:pulse 1s ease-in-out infinite}@keyframes pulse{50%{opacity:.3}}}
 </style>
 </head>
 <body>
@@ -285,6 +300,7 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
       <div class="lbl">Entrenar nunca sonó tan bien</div>
       <h1>Mi <span>rutina</span></h1>
     </div>
+    <button id="cloud" class="cloud" type="button" hidden aria-label="Estado de la nube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5H7z"/></svg><i></i></button>
   </header>
   <div id="sync" class="sync" data-state="off" aria-live="polite"></div>
 
@@ -299,15 +315,12 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
     <div id="pickbar"></div>
     <div class="panel">
       <input id="cat-q" class="search" type="search" placeholder="Buscar: prensa, polea, hombro…" aria-label="Buscar ejercicio" autocomplete="off">
-      <div class="seg seg3" role="group" aria-label="Zona del cuerpo">
-        <button type="button" data-zone="all" aria-pressed="true">Todo</button>
-        <button type="button" data-zone="sup" aria-pressed="false">Superior</button>
-        <button type="button" data-zone="inf" aria-pressed="false">Inferior</button>
-        <button type="button" data-zone="core" aria-pressed="false">Core</button>
+      <div class="fsel">
+        <select id="f-zone" aria-label="Zona del cuerpo"></select>
+        <select id="f-mus" aria-label="Músculo"></select>
+        <select id="f-eq" aria-label="Equipo"></select>
       </div>
-      <div class="fchips" id="cat-mus" role="group" aria-label="Músculo"></div>
-      <div class="fchips" id="cat-eq" role="group" aria-label="Equipo"></div>
-      <label class="chk"><input type="checkbox" id="cat-safe"> Ocultar los que tienen riesgo para mis zonas</label>
+      <label class="chk"><input type="checkbox" id="cat-safe"> Ocultar los riesgosos para mis zonas</label>
     </div>
     <div class="sub" id="cat-count"></div>
     <div class="list" id="cat-list"></div>
@@ -1475,7 +1488,10 @@ function catCard(x){
 }
 function renderCatList(){
   const items = catItems(), list = document.getElementById("cat-list");
-  document.getElementById("cat-count").textContent = `${items.length} ejercicio${items.length===1?"":"s"}${catMus ? " para " + GRUPOS[catMus].n.toLowerCase() : ""}. Toca uno para ver fotos, técnica y en qué días hacerlo.`;
+  const filt = catZone!=="all" || catMus || catEq!=="all" || catSafe;
+  const cc = document.getElementById("cat-count");
+  cc.innerHTML = `${items.length} ejercicio${items.length===1?"":"s"}${catMus ? " para " + GRUPOS[catMus].n.toLowerCase() : ""}. Toca uno para ver fotos, técnica y días.${filt ? ` <button class="linkbtn" type="button" id="f-clear">Quitar filtros</button>` : ""}`;
+  const fc = document.getElementById("f-clear"); if(fc) fc.onclick = () => { catZone = "all"; catMus = null; catEq = "all"; catSafe = false; renderCat(); };
   list.innerHTML = items.length ? items.map(catCard).join("") : `<p class="empty">No hay ejercicios con esos filtros.</p>`;
   list.querySelectorAll("[data-cx]").forEach(b => b.onclick = () => { if(swiped) return; const x = b.dataset.cx; catOpen = catOpen===x ? null : x; renderCatList(); if(catOpen) document.getElementById("c-"+x)?.scrollIntoView({block:"nearest", behavior:"smooth"}); });
   if(catPickDay!==null) list.querySelectorAll(".catrow.swfg").forEach(fg => { const x = fg.dataset.x, wd = catPickDay;
@@ -1489,15 +1505,17 @@ function renderCat(){
     pb.innerHTML = `<div class="pickbar"><b>Agregando al ${DIAS[catPickDay]} · ${n} ejercicio${n===1?"":"s"}<small>Desliza → para agregar · ← para quitar</small></b><button class="btn" type="button" id="pick-done">Listo</button></div>`;
     document.getElementById("pick-done").onclick = () => { editDay = catPickDay; catPickDay = null; setTab("train"); };
   } else pb.innerHTML = "";
-  document.querySelectorAll("[data-zone]").forEach(b => { b.setAttribute("aria-pressed", b.dataset.zone===catZone);
-    b.onclick = () => { catZone = b.dataset.zone; if(catMus && catZone!=="all" && GRUPOS[catMus].z!==catZone) catMus = null; renderCat(); }; });
+  // filtros compactos: listas desplegables; los músculos dependen de la zona elegida
+  const opt = (v, t, cur) => `<option value="${v}"${v===cur?" selected":""}>${t}</option>`;
+  const fz = document.getElementById("f-zone"), fm = document.getElementById("f-mus"), fe = document.getElementById("f-eq");
+  fz.innerHTML = [["all","Todo el cuerpo"],["sup","Superior"],["inf","Inferior"],["core","Core"]].map(([v,t]) => opt(v, t, catZone)).join("");
   const gs = Object.keys(GRUPOS).filter(g => catZone==="all" || GRUPOS[g].z===catZone);
-  const mus = document.getElementById("cat-mus");
-  mus.innerHTML = `<button type="button" data-g="" aria-pressed="${!catMus}">Todos</button>` + gs.map(g => `<button type="button" data-g="${g}" aria-pressed="${catMus===g}">${GRUPOS[g].n}</button>`).join("");
-  mus.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { catMus = b.dataset.g || null; renderCat(); });
-  const eqs = document.getElementById("cat-eq");
-  eqs.innerHTML = [["all","Todo equipo"],["m","Máquina"],["c","Polea"],["s","Smith"],["l","Peso libre"]].map(([k,n]) => `<button type="button" data-eq="${k}" aria-pressed="${catEq===k}">${n}</button>`).join("");
-  eqs.querySelectorAll("[data-eq]").forEach(b => b.onclick = () => { catEq = b.dataset.eq; renderCat(); });
+  fm.innerHTML = opt("", "Todo músculo", catMus || "") + gs.map(g => opt(g, GRUPOS[g].n, catMus || "")).join("");
+  fe.innerHTML = [["all","Todo equipo"],["m","Máquina"],["c","Polea"],["s","Smith"],["l","Peso libre"]].map(([v,t]) => opt(v, t, catEq)).join("");
+  fz.classList.toggle("on", catZone!=="all"); fm.classList.toggle("on", !!catMus); fe.classList.toggle("on", catEq!=="all");
+  fz.onchange = () => { catZone = fz.value; if(catMus && catZone!=="all" && GRUPOS[catMus].z!==catZone) catMus = null; renderCat(); };
+  fm.onchange = () => { catMus = fm.value || null; if(catMus && catZone!=="all" && GRUPOS[catMus].z!==catZone) catZone = GRUPOS[catMus].z; renderCat(); };
+  fe.onchange = () => { catEq = fe.value; renderCat(); };
   document.getElementById("cat-safe").checked = catSafe;
   renderCatList();
 }
@@ -1557,14 +1575,25 @@ let FB = null, fbAuth = null, fbDb = null, fbUser = null, fbUnsub = null, fbEmai
 try { fbEmail = localStorage.getItem("gymfbemail") || ""; } catch (e) {}
 
 const syncBox = document.getElementById("sync");
+let syncText = "";
+const cloudBtn = document.getElementById("cloud");
 function setSync(state, text) {
-  syncBox.dataset.state = state;
-  const btn = state === "off" ? `<button class="btn pri" id="sync-btn" type="button">Entrar con Google</button>`
-            : state === "on" || state === "offline" ? (fbUser ? `<button class="btn sec" id="sync-out" type="button">Salir</button>` : "") : "";
+  syncBox.dataset.state = state; syncText = text;
+  // con sesión iniciada el estado vive en la nube del encabezado; la barra solo aparece si hace falta actuar
+  cloudBtn.hidden = !fbUser; cloudBtn.dataset.state = state; cloudBtn.setAttribute("aria-label", "Estado de la nube: " + text);
+  const btn = state === "off" ? `<button class="btn pri" id="sync-btn" type="button">Entrar con Google</button>` : "";
   syncBox.innerHTML = `<span class="sync-dot"></span><span class="sync-txt">${text}</span>${btn}`;
   const b = document.getElementById("sync-btn"); if (b) b.onclick = login;
-  const o = document.getElementById("sync-out"); if (o) o.onclick = logout;
 }
+cloudBtn.onclick = () => {
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-label="Tu cuenta"><p><b>${fbUser?.email || ""}</b></p><p class="note">${syncText}</p>
+    <div class="actions"><button class="btn sec" type="button" data-out>Salir de la cuenta</button><button class="btn pri" type="button" data-no>Cerrar</button></div></div>`;
+  m.querySelector("[data-no]").onclick = () => m.remove();
+  m.onclick = e => { if (e.target === m) m.remove(); };
+  m.querySelector("[data-out]").onclick = () => { m.remove(); logout(); };
+  document.body.appendChild(m);
+};
 const monthOf = id => id === "rutina" ? "rutina" : ((String(id).match(/(\d{4}-\d{2})-\d{2}/) || [])[1] || "otros");
 const clean = v => JSON.parse(JSON.stringify(v));
 function allDocs() { return { ...logs, ...weights, ...meds, ...(rutina ? { rutina } : {}), ...(perfil ? { perfil } : {}) }; }
@@ -1585,9 +1614,9 @@ function fbFail(e) { fbErr = e && e.code || "error"; showState(false); }
 function showState(pending) {
   if (!fbUser) { setSync("off", "Entra con Google para guardar tus registros en la nube y verlos en cualquier teléfono."); return; }
   if (fbErr === "permission-denied") { setSync("error", "La nube rechazó el guardado. Lo registrado sigue en el teléfono; avísale a quien administra la app."); return; }
-  if (!navigator.onLine) { setSync("offline", pending ? "Sin internet. Tus cambios están en el teléfono y se subirán solos al volver la conexión." : "Sin internet. Puedes registrar normal: se sube al volver la conexión."); return; }
+  if (!navigator.onLine) { setSync("offline", pending ? "Sin internet · tus cambios se subirán solos al volver la conexión." : "Sin internet · puedes registrar normal, se sube al volver la conexión."); return; }
   if (pending) { setSync("busy", "Guardando en la nube…"); return; }
-  setSync("on", `Guardado en la nube · ${fbUser.email || ""}`);
+  setSync("on", "Todo está guardado en la nube.");
 }
 let migKey = "";
 function listen() {
@@ -1634,7 +1663,7 @@ async function loadFb() {
   return FB;
 }
 async function login() {
-  setSync("busy", "Abriendo Google…");
+  setSync("login", "Abriendo Google…");
   try {
     await loadFb();
     const p = new FB.GoogleAuthProvider(); p.setCustomParameters({ prompt: "select_account" });
